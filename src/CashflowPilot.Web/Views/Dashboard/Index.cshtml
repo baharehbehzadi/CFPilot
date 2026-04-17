@@ -1,0 +1,175 @@
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl">
+        <div class="stat-card">
+            <div class="stat-value">@ViewBag.PortfolioCount</div>
+            <div class="stat-label"><i class="bi bi-briefcase me-1"></i>Portfolios</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl">
+        <div class="stat-card">
+            <div class="stat-value">@ViewBag.ForecastRunCount</div>
+            <div class="stat-label"><i class="bi bi-calendar3 me-1"></i>Forecast Runs</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl">
+        <div class="stat-card">
+            <div class="stat-value">@ViewBag.ActualRunCount</div>
+            <div class="stat-label"><i class="bi bi-check-circle me-1"></i>Actual Runs</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl">
+        <div class="stat-card">
+            <div class="stat-value">@ViewBag.AnalysisCount</div>
+            <div class="stat-label"><i class="bi bi-bar-chart-line me-1"></i>Analyses</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl">
+        <div class="stat-card">
+            <div class="stat-value">@ViewBag.ScenarioCount</div>
+            <div class="stat-label"><i class="bi bi-sliders me-1"></i>Scenarios</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Quick Actions</span>
+            </div>
+            <div class="card-body d-flex flex-wrap gap-2">
+                <a asp-controller="Upload" asp-action="UploadForecast" class="btn btn-primary btn-sm"><i class="bi bi-cloud-upload me-1"></i>Upload Forecast</a>
+                <a asp-controller="Upload" asp-action="UploadActual" class="btn btn-outline-primary btn-sm"><i class="bi bi-cloud-upload me-1"></i>Upload Actuals</a>
+                <a asp-controller="Analysis" asp-action="Create" class="btn btn-outline-secondary btn-sm"><i class="bi bi-bar-chart-line me-1"></i>New Analysis</a>
+                <a asp-controller="Scenario" asp-action="Create" class="btn btn-outline-secondary btn-sm"><i class="bi bi-sliders me-1"></i>New Scenario</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Recent Forecast Runs</span>
+                <a asp-controller="Upload" asp-action="UploadForecast" class="btn btn-sm btn-outline-primary">Upload</a>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-hover mb-0">
+                    <thead><tr><th>Name</th><th>Portfolio</th><th>Date</th><th>Entries</th></tr></thead>
+                    <tbody>
+                    @if (ViewBag.RecentForecastRuns != null)
+                    {
+                        foreach (var r in ViewBag.RecentForecastRuns)
+                        {
+                            <tr>
+                                <td>@r.Name</td>
+                                <td><span class="text-muted small">@r.Portfolio?.Name</span></td>
+                                <td><span class="text-muted small">@r.RunDate.ToString("dd MMM yyyy")</span></td>
+                                <td><span class="badge bg-light text-dark">@r.EntryCount</span></td>
+                            </tr>
+                        }
+                    }
+                    @if (ViewBag.RecentForecastRuns == null || ((IEnumerable<dynamic>)ViewBag.RecentForecastRuns).Count() == 0)
+                    {
+                        <tr><td colspan="4" class="text-muted text-center py-3">No forecast runs yet</td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Recent Actual Runs</span>
+                <a asp-controller="Upload" asp-action="UploadActual" class="btn btn-sm btn-outline-primary">Upload</a>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-hover mb-0">
+                    <thead><tr><th>Name</th><th>Portfolio</th><th>Period</th><th>Entries</th></tr></thead>
+                    <tbody>
+                    @if (ViewBag.RecentActualRuns != null)
+                    {
+                        foreach (var r in ViewBag.RecentActualRuns)
+                        {
+                            <tr>
+                                <td>@r.Name</td>
+                                <td><span class="text-muted small">@r.Portfolio?.Name</span></td>
+                                <td><span class="text-muted small">@r.ReportingPeriod.ToString("MMM yyyy")</span></td>
+                                <td><span class="badge bg-light text-dark">@r.EntryCount</span></td>
+                            </tr>
+                        }
+                    }
+                    @if (ViewBag.RecentActualRuns == null || ((IEnumerable<dynamic>)ViewBag.RecentActualRuns).Count() == 0)
+                    {
+                        <tr><td colspan="4" class="text-muted text-center py-3">No actual runs yet</td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Recent Analyses</span>
+                <a asp-controller="Analysis" asp-action="Index" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-hover mb-0">
+                    <thead><tr><th>Name</th><th>Forecast</th><th>Actual</th><th>Created</th><th></th></tr></thead>
+                    <tbody>
+                    @if (ViewBag.RecentAnalyses != null)
+                    {
+                        foreach (var a in ViewBag.RecentAnalyses)
+                        {
+                            <tr>
+                                <td>@a.Name</td>
+                                <td><span class="text-muted small">@a.ForecastRun?.Name</span></td>
+                                <td><span class="text-muted small">@a.ActualRun?.Name</span></td>
+                                <td><span class="text-muted small">@a.CreatedAt.ToString("dd MMM yyyy")</span></td>
+                                <td><a asp-controller="Analysis" asp-action="Detail" asp-route-id="@a.Id" class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2">View</a></td>
+                            </tr>
+                        }
+                    }
+                    @if (ViewBag.RecentAnalyses == null || ((IEnumerable<dynamic>)ViewBag.RecentAnalyses).Count() == 0)
+                    {
+                        <tr><td colspan="5" class="text-muted text-center py-3">No analyses yet — upload data to get started</td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">Recent Activity</div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                @if (ViewBag.RecentAuditLogs != null)
+                {
+                    foreach (var log in ViewBag.RecentAuditLogs)
+                    {
+                        <li class="list-group-item py-2 px-3">
+                            <div class="fw-semibold small">@log.Action <span class="text-muted">@log.EntityType</span></div>
+                            <div class="text-muted" style="font-size:.75rem">@log.UserName · @log.Timestamp.ToString("dd MMM HH:mm")</div>
+                        </li>
+                    }
+                }
+                @if (ViewBag.RecentAuditLogs == null || ((IEnumerable<dynamic>)ViewBag.RecentAuditLogs).Count() == 0)
+                {
+                    <li class="list-group-item text-muted text-center py-3 small">No activity yet</li>
+                }
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

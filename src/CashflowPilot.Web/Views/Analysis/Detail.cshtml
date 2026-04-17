@@ -1,0 +1,186 @@
+@model CashflowPilot.Web.Models.AnalysisDetailViewModel
+@{
+    ViewData["Title"] = Model.Summary.AnalysisName;
+    var s = Model.Summary;
+    bool isPos = s.TotalNetCashflowVariance >= 0;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h5 class="mb-0">@s.AnalysisName</h5>
+        <small class="text-muted">@s.ForecastRunName vs @s.ActualRunName &middot; Created @s.CreatedAt.ToString("dd MMM yyyy")</small>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="ExportCsv" asp-route-id="@s.AnalysisId" class="btn btn-sm btn-outline-secondary"><i class="bi bi-filetype-csv me-1"></i>CSV</a>
+        <a asp-action="ExportExcel" asp-route-id="@s.AnalysisId" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-excel me-1"></i>Excel</a>
+        @if (User.IsInRole("Admin") || User.IsInRole("Analyst"))
+        {
+            <a asp-controller="Commentary" asp-action="Generate" asp-route-analysisId="@s.AnalysisId" class="btn btn-sm btn-primary"><i class="bi bi-chat-text me-1"></i>@(Model.Commentary != null ? "Regenerate Commentary" : "Generate Commentary")</a>
+        }
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl">
+        <div class="stat-card">
+            <div class="stat-value">@s.TotalForecastNetCashflow.ToString("N0")</div>
+            <div class="stat-label">Forecast Net</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl">
+        <div class="stat-card">
+            <div class="stat-value">@s.TotalActualNetCashflow.ToString("N0")</div>
+            <div class="stat-label">Actual Net</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl">
+        <div class="stat-card">
+            <div class="stat-value @(isPos ? "variance-pos" : "variance-neg")">
+                @(isPos ? "+" : "")@s.TotalNetCashflowVariance.ToString("N0")
+            </div>
+            <div class="stat-label">Net Variance @(s.TotalNetCashflowVariancePct.HasValue ? $"({s.TotalNetCashflowVariancePct.Value:+0.#;-0.#;0}%)" : "")</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl">
+        <div class="stat-card">
+            <div class="stat-value">@s.TotalCallsVariance.ToString("N0")</div>
+            <div class="stat-label">Calls Variance</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl">
+        <div class="stat-card">
+            <div class="stat-value">@s.TotalDistributionsVariance.ToString("N0")</div>
+            <div class="stat-label">Dist Variance</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">Net Cashflow: Forecast vs Actual by Period</div>
+            <div class="card-body"><canvas id="varianceChart" height="100"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">Variance by Fund</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Fund</th><th class="text-end">Net Var</th></tr></thead>
+                    <tbody>
+                    @foreach (var f in s.ByFund)
+                    {
+                        <tr>
+                            <td class="small">@f.FundName</td>
+                            <td class="text-end font-monospace small @(f.TotalNetVariance >= 0 ? "variance-pos" : "variance-neg")">
+                                @(f.TotalNetVariance >= 0 ? "+" : "")@f.TotalNetVariance.ToString("N0")
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">Variance by Period</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Period</th>
+                        <th class="text-end">Fcst Calls</th><th class="text-end">Act Calls</th><th class="text-end">Calls Var</th>
+                        <th class="text-end">Fcst Dist</th><th class="text-end">Act Dist</th><th class="text-end">Dist Var</th>
+                        <th class="text-end">Fcst Net</th><th class="text-end">Act Net</th>
+                        <th class="text-end">Net Var</th><th class="text-end">Cumulative</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var p in s.ByPeriod)
+                {
+                    <tr>
+                        <td class="fw-semibold small">@p.Period.ToString("MMM-yyyy")</td>
+                        <td class="text-end font-monospace small">@p.ForecastCalls.ToString("N0")</td>
+                        <td class="text-end font-monospace small">@p.ActualCalls.ToString("N0")</td>
+                        <td class="text-end font-monospace small @(p.CallsVariance >= 0 ? "variance-pos" : "variance-neg")">@(p.CallsVariance >= 0 ? "+" : "")@p.CallsVariance.ToString("N0")</td>
+                        <td class="text-end font-monospace small">@p.ForecastDistributions.ToString("N0")</td>
+                        <td class="text-end font-monospace small">@p.ActualDistributions.ToString("N0")</td>
+                        <td class="text-end font-monospace small @(p.DistributionsVariance >= 0 ? "variance-pos" : "variance-neg")">@(p.DistributionsVariance >= 0 ? "+" : "")@p.DistributionsVariance.ToString("N0")</td>
+                        <td class="text-end font-monospace small">@p.ForecastNet.ToString("N0")</td>
+                        <td class="text-end font-monospace small">@p.ActualNet.ToString("N0")</td>
+                        <td class="text-end font-monospace small @(p.NetVariance >= 0 ? "variance-pos" : "variance-neg")">@(p.NetVariance >= 0 ? "+" : "")@p.NetVariance.ToString("N0")</td>
+                        <td class="text-end font-monospace small @(p.CumulativeVariance >= 0 ? "variance-pos" : "variance-neg")">@p.CumulativeVariance.ToString("N0")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@if (Model.Commentary != null)
+{
+    var c = Model.Commentary;
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-chat-text me-2"></i>Commentary Pack</span>
+            <small class="text-muted">Generated @c.GeneratedAt.ToString("dd MMM yyyy HH:mm")</small>
+        </div>
+        <div class="card-body">
+            <div class="mb-3 p-3 bg-light rounded">
+                <h6 class="text-uppercase small fw-bold text-muted mb-2">Executive Summary</h6>
+                <p class="mb-0">@c.ExecutiveSummary</p>
+            </div>
+            <div class="accordion" id="commentaryAccordion">
+                @{
+                    void CommentarySection(string id, string icon, string title, string body)
+                    {
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#@id">
+                                    <i class="bi @icon me-2"></i>@title
+                                </button>
+                            </h2>
+                            <div id="@id" class="accordion-collapse collapse" data-bs-parent="#commentaryAccordion">
+                                <div class="accordion-body small">@body</div>
+                            </div>
+                        </div>
+                    }
+                }
+                @{ CommentarySection("posVar", "bi-arrow-up-circle text-success", "Positive Variances", c.PositiveVariances); }
+                @{ CommentarySection("negVar", "bi-arrow-down-circle text-danger", "Negative Variances", c.NegativeVariances); }
+                @{ CommentarySection("delDist", "bi-clock-history text-warning", "Delayed Distributions", c.DelayedDistributions); }
+                @{ CommentarySection("highCalls", "bi-exclamation-circle text-danger", "Higher-Than-Expected Calls", c.HigherThanExpectedCalls); }
+                @{ CommentarySection("watch", "bi-eye text-primary", "Watchpoints", c.Watchpoints); }
+            </div>
+            <div class="mt-3">
+                <a asp-controller="Commentary" asp-action="PrintReport" asp-route-analysisId="@s.AnalysisId" class="btn btn-outline-secondary btn-sm" target="_blank"><i class="bi bi-printer me-1"></i>Print Report</a>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+<script>
+(function(){
+    var periods = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(s.ByPeriod.Select(p => p.Period.ToString("MMM-yy")).ToList()));
+    var fcst = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(s.ByPeriod.Select(p => (double)p.ForecastNet).ToList()));
+    var act = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(s.ByPeriod.Select(p => (double)p.ActualNet).ToList()));
+    new Chart(document.getElementById('varianceChart'), {
+        type: 'bar',
+        data: {
+            labels: periods,
+            datasets: [
+                { label: 'Forecast Net', data: fcst, backgroundColor: 'rgba(45,99,153,0.5)', borderColor: '#2d6399', borderWidth: 1 },
+                { label: 'Actual Net', data: act, backgroundColor: 'rgba(21,87,36,0.5)', borderColor: '#155724', borderWidth: 1 }
+            ]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: false } } }
+    });
+})();
+</script>
+}

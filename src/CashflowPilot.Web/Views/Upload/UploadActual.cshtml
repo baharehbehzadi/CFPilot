@@ -1,0 +1,45 @@
+@model CashflowPilot.Web.Models.UploadActualViewModel
+@{ ViewData["Title"] = "Upload Actuals"; }
+
+<div class="row justify-content-center">
+<div class="col-lg-7">
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-cloud-upload me-2"></i>Upload Actual Cashflows CSV
+    </div>
+    <div class="card-body">
+        <form asp-action="UploadActual" method="post" enctype="multipart/form-data">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+            <div class="mb-3">
+                <label asp-for="RunName" class="form-label fw-semibold">Run Name</label>
+                <input asp-for="RunName" class="form-control" placeholder="e.g. Q1 2024 Actuals" />
+                <span asp-validation-for="RunName" class="text-danger small"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="PortfolioId" class="form-label fw-semibold">Portfolio</label>
+                <select asp-for="PortfolioId" class="form-select"
+                    asp-items="@(new SelectList(Model.Portfolios, "Id", "Name"))">
+                    <option value="">-- Select Portfolio --</option>
+                </select>
+                <span asp-validation-for="PortfolioId" class="text-danger small"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="ReportingPeriod" class="form-label fw-semibold">Reporting Period</label>
+                <input asp-for="ReportingPeriod" type="date" class="form-control" />
+                <div class="form-text">The primary reporting month for this actual upload.</div>
+                <span asp-validation-for="ReportingPeriod" class="text-danger small"></span>
+            </div>
+            <div class="mb-4">
+                <label asp-for="File" class="form-label fw-semibold">CSV File</label>
+                <input asp-for="File" type="file" class="form-control" accept=".csv,.txt" />
+                <span asp-validation-for="File" class="text-danger small"></span>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-upload me-1"></i>Upload &amp; Preview</button>
+                <a asp-controller="Dashboard" asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+</div>

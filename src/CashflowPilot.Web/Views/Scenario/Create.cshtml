@@ -1,0 +1,70 @@
+@model CashflowPilot.Web.Models.CreateScenarioViewModel
+@{ ViewData["Title"] = "New Scenario"; }
+
+<div class="row justify-content-center">
+<div class="col-lg-7">
+<div class="card">
+    <div class="card-header"><i class="bi bi-sliders me-2"></i>Create Scenario</div>
+    <div class="card-body">
+        <form asp-action="Create" method="post">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label fw-semibold">Scenario Name</label>
+                <input asp-for="Name" class="form-control" placeholder="e.g. Bear Case — Higher Calls" />
+                <span asp-validation-for="Name" class="text-danger small"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label fw-semibold">Description <span class="text-muted">(optional)</span></label>
+                <textarea asp-for="Description" class="form-control" rows="2" placeholder="Brief description of this scenario's assumptions..."></textarea>
+            </div>
+            <div class="mb-3">
+                <label asp-for="ForecastRunId" class="form-label fw-semibold">Baseline Forecast Run</label>
+                <select asp-for="ForecastRunId" class="form-select"
+                    asp-items="@(new SelectList(Model.ForecastRuns, "Id", "Name"))">
+                    <option value="">-- Select Forecast Run --</option>
+                </select>
+                <span asp-validation-for="ForecastRunId" class="text-danger small"></span>
+            </div>
+            <div class="card bg-light mb-4">
+                <div class="card-body">
+                    <h6 class="card-title small text-uppercase text-muted fw-bold">Assumptions</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="CallsAdjustmentPct" class="form-label fw-semibold">Capital Calls Adjustment (%)</label>
+                            <div class="input-group">
+                                <input asp-for="CallsAdjustmentPct" type="number" step="0.1" class="form-control" />
+                                <span class="input-group-text">%</span>
+                            </div>
+                            <div class="form-text">+10 = 10% more calls, -10 = 10% fewer</div>
+                            <span asp-validation-for="CallsAdjustmentPct" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="DistributionsAdjustmentPct" class="form-label fw-semibold">Distributions Adjustment (%)</label>
+                            <div class="input-group">
+                                <input asp-for="DistributionsAdjustmentPct" type="number" step="0.1" class="form-control" />
+                                <span class="input-group-text">%</span>
+                            </div>
+                            <div class="form-text">+10 = 10% more distributions</div>
+                            <span asp-validation-for="DistributionsAdjustmentPct" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="TimingShiftMonths" class="form-label fw-semibold">Timing Shift (months)</label>
+                            <div class="input-group">
+                                <input asp-for="TimingShiftMonths" type="number" class="form-control" />
+                                <span class="input-group-text">months</span>
+                            </div>
+                            <div class="form-text">+2 = delay all cashflows by 2 months, -1 = accelerate by 1</div>
+                            <span asp-validation-for="TimingShiftMonths" class="text-danger small"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-calculator me-1"></i>Create &amp; Run</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+</div>

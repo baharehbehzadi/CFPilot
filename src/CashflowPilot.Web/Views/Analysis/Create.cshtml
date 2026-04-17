@@ -1,0 +1,39 @@
+@model CashflowPilot.Web.Models.CreateAnalysisViewModel
+@{ ViewData["Title"] = "New Variance Analysis"; }
+
+<div class="row justify-content-center">
+<div class="col-lg-7">
+<div class="card">
+    <div class="card-header"><i class="bi bi-bar-chart-line me-2"></i>Create Variance Analysis</div>
+    <div class="card-body">
+        <form asp-action="Create" method="post">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label fw-semibold">Analysis Name <span class="text-muted">(optional)</span></label>
+                <input asp-for="Name" class="form-control" placeholder="e.g. Q1 2024 Variance" />
+            </div>
+            <div class="mb-3">
+                <label asp-for="ForecastRunId" class="form-label fw-semibold">Forecast Run</label>
+                <select asp-for="ForecastRunId" class="form-select"
+                    asp-items="@(new SelectList(Model.ForecastRuns, "Id", "Name"))">
+                    <option value="">-- Select Forecast Run --</option>
+                </select>
+                <span asp-validation-for="ForecastRunId" class="text-danger small"></span>
+            </div>
+            <div class="mb-4">
+                <label asp-for="ActualRunId" class="form-label fw-semibold">Actual Run</label>
+                <select asp-for="ActualRunId" class="form-select"
+                    asp-items="@(new SelectList(Model.ActualRuns, "Id", "Name"))">
+                    <option value="">-- Select Actual Run --</option>
+                </select>
+                <span asp-validation-for="ActualRunId" class="text-danger small"></span>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-calculator me-1"></i>Run Analysis</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+</div>

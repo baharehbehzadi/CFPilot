@@ -1,0 +1,87 @@
+@model CashflowPilot.Web.Models.ValidationResultViewModel
+@{ ViewData["Title"] = "Validate &amp; Import"; }
+
+<div class="row g-3">
+<div class="col-12">
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clipboard-check me-2"></i>Parse Results — @Model.FileName</span>
+        <div class="d-flex gap-2 align-items-center">
+            <span class="badge bg-success">@Model.ParseResult.ValidRows valid</span>
+            @if (Model.ParseResult.InvalidRows > 0)
+            {
+                <span class="badge bg-danger">@Model.ParseResult.InvalidRows invalid</span>
+            }
+            <span class="badge bg-secondary">@Model.ParseResult.TotalRows total</span>
+        </div>
+    </div>
+    <div class="card-body">
+        @if (Model.ParseResult.GlobalErrors.Any())
+        {
+            <div class="alert alert-danger">
+                <strong>Parse errors:</strong>
+                <ul class="mb-0">@foreach (var e in Model.ParseResult.GlobalErrors) { <li>@e</li> }</ul>
+            </div>
+        }
+        @if (Model.ParseResult.ValidRows > 0)
+        {
+            <div class="alert alert-success">
+                <i class="bi bi-check-circle me-1"></i>
+                <strong>@Model.ParseResult.ValidRows rows ready to import.</strong>
+                @if (Model.ParseResult.InvalidRows > 0)
+                { <span>@Model.ParseResult.InvalidRows rows have errors and will be skipped.</span> }
+            </div>
+            <form asp-action="Import" method="post">
+                <input type="hidden" name="UploadedFileId" value="@Model.UploadedFileId" />
+                <input type="hidden" name="PortfolioId" value="@Model.PortfolioId" />
+                <input type="hidden" name="RunName" value="@Model.RunName" />
+                <input type="hidden" name="FileType" value="@Model.FileType" />
+                @if (Model.ReportingPeriod.HasValue)
+                {
+                    <input type="hidden" name="ReportingPeriod" value="@Model.ReportingPeriod.Value.ToString("yyyy-MM-dd")" />
+                }
+                <div class="d-flex gap-2 mb-4">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-database-add me-1"></i>Import @Model.ParseResult.ValidRows Rows</button>
+                    <a asp-action="@(Model.FileType == "Forecast" ? "UploadForecast" : "UploadActual")" class="btn btn-outline-secondary">Upload Different File</a>
+                </div>
+            </form>
+        }
+        <div class="table-responsive" style="max-height: 400px; overflow-y:auto">
+            <table class="table table-sm table-striped">
+                <thead class="sticky-top bg-white">
+                    <tr>
+                        <th>#</th><th>Fund</th><th>Strategy</th><th>Period</th>
+                        <th class="text-end">Capital Calls</th><th class="text-end">Distributions</th>
+                        <th>Currency</th><th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.ParseResult.Rows.Take(200))
+                    {
+                        <tr class="@(row.IsValid ? "" : "table-danger")">
+                            <td class="text-muted">@row.RowNumber</td>
+                            <td>@(row.FundName ?? "-")</td>
+                            <td>@(row.StrategyName ?? "-")</td>
+                            <td>@(row.PeriodDate?.ToString("MMM-yyyy") ?? row.Period)</td>
+                            <td class="text-end font-monospace">@(row.CapitalCallsAmount?.ToString("N0") ?? "-")</td>
+                            <td class="text-end font-monospace">@(row.DistributionsAmount?.ToString("N0") ?? "-")</td>
+                            <td>@(row.Currency ?? "USD")</td>
+                            <td>
+                                @if (row.IsValid)
+                                { <span class="badge bg-success-subtle text-success">OK</span> }
+                                else
+                                { <span class="badge bg-danger-subtle text-danger" title="@string.Join("; ", row.ValidationErrors)">Error</span> }
+                            </td>
+                        </tr>
+                    }
+                    @if (Model.ParseResult.Rows.Count > 200)
+                    {
+                        <tr><td colspan="8" class="text-muted text-center">... @(Model.ParseResult.Rows.Count - 200) more rows not shown</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
+</div>

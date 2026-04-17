@@ -1,0 +1,77 @@
+@model CashflowPilot.Web.Models.MappingViewModel
+@{ ViewData["Title"] = "Map Columns"; }
+
+<div class="row justify-content-center">
+<div class="col-lg-8">
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-table me-2"></i>Column Mapping
+        <span class="text-muted fw-normal small ms-2">— Auto-detection could not identify all required columns. Please map them manually.</span>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info small mb-4">
+            <i class="bi bi-info-circle me-1"></i>
+            Detected <strong>@Model.DetectedHeaders.Count</strong> columns in your file:
+            <span class="font-monospace">@string.Join(", ", Model.DetectedHeaders)</span>
+        </div>
+        <form asp-action="ApplyMapping" method="post">
+            <input type="hidden" asp-for="UploadedFileId" />
+            <input type="hidden" asp-for="FileType" />
+            <input type="hidden" asp-for="PortfolioId" />
+            <input type="hidden" asp-for="RunName" />
+            @if (Model.ReportingPeriod.HasValue)
+            {
+                <input type="hidden" name="ReportingPeriod" value="@Model.ReportingPeriod.Value.ToString("yyyy-MM-dd")" />
+            }
+
+            @{
+                var headerOptions = Model.DetectedHeaders.Select(h => new SelectListItem(h, h)).ToList();
+                headerOptions.Insert(0, new SelectListItem("-- Not present --", ""));
+            }
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Fund Name Column <span class="text-muted small">(optional)</span></label>
+                    <select name="FundNameColumn" class="form-select">
+                        @foreach (var opt in headerOptions) { <option value="@opt.Value" @(opt.Value == Model.FundNameColumn ? "selected" : "")>@opt.Text</option> }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Strategy Column <span class="text-muted small">(optional)</span></label>
+                    <select name="StrategyColumn" class="form-select">
+                        @foreach (var opt in headerOptions) { <option value="@opt.Value" @(opt.Value == Model.StrategyColumn ? "selected" : "")>@opt.Text</option> }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Period Column <span class="text-danger">*</span></label>
+                    <select name="PeriodColumn" class="form-select">
+                        @foreach (var opt in headerOptions) { <option value="@opt.Value" @(opt.Value == Model.PeriodColumn ? "selected" : "")>@opt.Text</option> }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Capital Calls Column</label>
+                    <select name="CapitalCallsColumn" class="form-select">
+                        @foreach (var opt in headerOptions) { <option value="@opt.Value" @(opt.Value == Model.CapitalCallsColumn ? "selected" : "")>@opt.Text</option> }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Distributions Column</label>
+                    <select name="DistributionsColumn" class="form-select">
+                        @foreach (var opt in headerOptions) { <option value="@opt.Value" @(opt.Value == Model.DistributionsColumn ? "selected" : "")>@opt.Text</option> }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Currency Column <span class="text-muted small">(optional)</span></label>
+                    <select name="CurrencyColumn" class="form-select">
+                        @foreach (var opt in headerOptions) { <option value="@opt.Value" @(opt.Value == Model.CurrencyColumn ? "selected" : "")>@opt.Text</option> }
+                    </select>
+                </div>
+            </div>
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Apply Mapping &amp; Preview</button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+</div>

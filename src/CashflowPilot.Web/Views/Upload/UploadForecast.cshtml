@@ -1,0 +1,49 @@
+@model CashflowPilot.Web.Models.UploadForecastViewModel
+@{ ViewData["Title"] = "Upload Forecast"; }
+
+<div class="row justify-content-center">
+<div class="col-lg-7">
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-cloud-upload me-2"></i>Upload Forecast CSV
+    </div>
+    <div class="card-body">
+        <form asp-action="UploadForecast" method="post" enctype="multipart/form-data">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+            <div class="mb-3">
+                <label asp-for="RunName" class="form-label fw-semibold">Run Name</label>
+                <input asp-for="RunName" class="form-control" placeholder="e.g. Q1 2024 Forecast" />
+                <span asp-validation-for="RunName" class="text-danger small"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="PortfolioId" class="form-label fw-semibold">Portfolio</label>
+                <select asp-for="PortfolioId" class="form-select"
+                    asp-items="@(new SelectList(Model.Portfolios, "Id", "Name"))">
+                    <option value="">-- Select Portfolio --</option>
+                </select>
+                <span asp-validation-for="PortfolioId" class="text-danger small"></span>
+            </div>
+            <div class="mb-4">
+                <label asp-for="File" class="form-label fw-semibold">CSV File</label>
+                <input asp-for="File" type="file" class="form-control" accept=".csv,.txt" />
+                <div class="form-text">Expected columns: Fund, Period, Capital Calls, Distributions. <a href="#" data-bs-toggle="collapse" data-bs-target="#formatHelp">See format guide</a></div>
+                <span asp-validation-for="File" class="text-danger small"></span>
+            </div>
+            <div class="collapse mb-4" id="formatHelp">
+                <div class="card card-body bg-light small">
+                    <strong>Expected CSV Format:</strong><br/>
+                    <code>Fund,Period,Capital Calls,Distributions,Currency<br/>
+Apex Buyout Fund,2024-01,1500000,0,USD<br/>
+Nordic Growth Capital,2024-01,750000,500000,EUR</code><br/><br/>
+                    Column names are auto-detected (case-insensitive). If not detected, you'll be shown a mapping step.
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-upload me-1"></i>Upload &amp; Preview</button>
+                <a asp-controller="Dashboard" asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+</div>

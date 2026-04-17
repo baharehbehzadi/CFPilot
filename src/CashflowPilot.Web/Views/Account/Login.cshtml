@@ -1,0 +1,61 @@
+@model CashflowPilot.Web.Models.LoginViewModel
+@{
+    Layout = null;
+    ViewData["Title"] = "Sign In";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign In — CashflowPilot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <style>
+        body { background: #f0f4f8; }
+        .login-card { max-width: 400px; margin: 80px auto; }
+        .login-brand { text-align: center; margin-bottom: 2rem; }
+        .login-brand h2 { color: #1a3a5c; font-weight: 700; }
+        .login-brand p { color: #64748b; font-size: .9rem; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="login-card">
+        <div class="login-brand">
+            <h2>CashflowPilot</h2>
+            <p>Private Markets Cashflow Analytics</p>
+        </div>
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-4">Sign In</h5>
+                <form asp-action="Login" method="post">
+                    <input type="hidden" asp-for="ReturnUrl" />
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label fw-semibold">Email</label>
+                        <input asp-for="Email" class="form-control" autocomplete="username" placeholder="you@company.com" />
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label fw-semibold">Password</label>
+                        <input asp-for="Password" class="form-control" autocomplete="current-password" />
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-4 form-check">
+                        <input asp-for="RememberMe" class="form-check-input" />
+                        <label asp-for="RememberMe" class="form-check-label">Remember me</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Sign In</button>
+                </form>
+                <hr class="my-3"/>
+                <div class="text-muted small">
+                    <strong>Demo accounts:</strong><br/>
+                    admin@meridian.example / Admin@123456<br/>
+                    analyst@meridian.example / Analyst@123456
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+# .NET build outputs
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+
+# NuGet
+*.nupkg
+.nuget/
+packages/
+
+# SQLite database files
+*.db
+*.db-shm
+*.db-wal
+
+# Storage folder (uploaded files)
+storage/
+storage-dev/
+
+# Log files
+logs/
+
+# Secrets — keep Development config tracked so demo works out of the box
+appsettings.local.json
+secrets.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+
+# Rider
+.idea/
+
+# Temp
+*.tmp
+*.temp
