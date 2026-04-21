@@ -32,39 +32,27 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Fund Name Column <span class="text-muted small">(optional)</span></label>
-                    <select name="FundNameColumn" class="form-select">
-                        @foreach (var opt in headerOptions) { <option value="@opt.Value" @(opt.Value == Model.FundNameColumn ? "selected" : "")>@opt.Text</option> }
-                    </select>
+                    @Html.DropDownList("FundNameColumn", new SelectList(headerOptions, "Value", "Text", Model.FundNameColumn), new { @class = "form-select" })
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Strategy Column <span class="text-muted small">(optional)</span></label>
-                    <select name="StrategyColumn" class="form-select">
-                        @foreach (var opt in headerOptions) { <option value="@opt.Value" @(opt.Value == Model.StrategyColumn ? "selected" : "")>@opt.Text</option> }
-                    </select>
+                    @Html.DropDownList("StrategyColumn", new SelectList(headerOptions, "Value", "Text", Model.StrategyColumn), new { @class = "form-select" })
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Period Column <span class="text-danger">*</span></label>
-                    <select name="PeriodColumn" class="form-select">
-                        @foreach (var opt in headerOptions) { <option value="@opt.Value" @(opt.Value == Model.PeriodColumn ? "selected" : "")>@opt.Text</option> }
-                    </select>
+                    @Html.DropDownList("PeriodColumn", new SelectList(headerOptions, "Value", "Text", Model.PeriodColumn), new { @class = "form-select" })
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Capital Calls Column</label>
-                    <select name="CapitalCallsColumn" class="form-select">
-                        @foreach (var opt in headerOptions) { <option value="@opt.Value" @(opt.Value == Model.CapitalCallsColumn ? "selected" : "")>@opt.Text</option> }
-                    </select>
+                    @Html.DropDownList("CapitalCallsColumn", new SelectList(headerOptions, "Value", "Text", Model.CapitalCallsColumn), new { @class = "form-select" })
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Distributions Column</label>
-                    <select name="DistributionsColumn" class="form-select">
-                        @foreach (var opt in headerOptions) { <option value="@opt.Value" @(opt.Value == Model.DistributionsColumn ? "selected" : "")>@opt.Text</option> }
-                    </select>
+                    @Html.DropDownList("DistributionsColumn", new SelectList(headerOptions, "Value", "Text", Model.DistributionsColumn), new { @class = "form-select" })
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Currency Column <span class="text-muted small">(optional)</span></label>
-                    <select name="CurrencyColumn" class="form-select">
-                        @foreach (var opt in headerOptions) { <option value="@opt.Value" @(opt.Value == Model.CurrencyColumn ? "selected" : "")>@opt.Text</option> }
-                    </select>
+                    @Html.DropDownList("CurrencyColumn", new SelectList(headerOptions, "Value", "Text", Model.CurrencyColumn), new { @class = "form-select" })
                 </div>
             </div>
             <div class="mt-4 d-flex gap-2">
