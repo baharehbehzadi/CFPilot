@@ -21,8 +21,9 @@ public static class SeedData
         {
             await db.Database.MigrateAsync();
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogWarning(ex, "MigrateAsync failed, falling back to EnsureCreatedAsync");
             await db.Database.EnsureCreatedAsync();
         }
 
