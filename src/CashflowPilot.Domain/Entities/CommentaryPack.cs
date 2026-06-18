@@ -6,6 +6,8 @@ public class CommentaryPack
     public int OrganizationId { get; set; }
     public int VarianceAnalysisId { get; set; }
     public VarianceAnalysis VarianceAnalysis { get; set; } = null!;
+    public int? ReportingPeriodId { get; set; }
+    public ReportingPeriod? ReportingPeriod { get; set; }
     public DateTime GeneratedAt { get; set; } = DateTime.UtcNow;
     public string GeneratedByUserId { get; set; } = string.Empty;
     public string ExecutiveSummary { get; set; } = string.Empty;

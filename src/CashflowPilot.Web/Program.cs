@@ -52,6 +52,8 @@ builder.Services.AddScoped<IScenarioService, ScenarioService>();
 builder.Services.AddScoped<ICommentaryService, CommentaryService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IReportExportService, ReportExportService>();
+builder.Services.AddScoped<IVarianceComparisonService, VarianceComparisonService>();
+builder.Services.AddScoped<INavSnapshotService, NavSnapshotService>();
 
 // Authorization policies
 builder.Services.AddAuthorization(options =>

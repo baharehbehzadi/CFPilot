@@ -8,6 +8,8 @@ public class ForecastRun
     public int OrganizationId { get; set; }
     public int PortfolioId { get; set; }
     public Portfolio Portfolio { get; set; } = null!;
+    public int? ReportingPeriodId { get; set; }
+    public ReportingPeriod? ReportingPeriod { get; set; }
     public string Name { get; set; } = string.Empty;
     public DateTime RunDate { get; set; } = DateTime.UtcNow;
     public string CreatedByUserId { get; set; } = string.Empty;

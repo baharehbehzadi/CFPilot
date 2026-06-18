@@ -31,6 +31,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<CommentaryPack> CommentaryPacks => Set<CommentaryPack>();
     public DbSet<Scenario> Scenarios => Set<Scenario>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<ReportingPeriod> ReportingPeriods => Set<ReportingPeriod>();
+    public DbSet<NavSnapshot> NavSnapshots => Set<NavSnapshot>();
+    public DbSet<ValidationIssue> ValidationIssues => Set<ValidationIssue>();
+    public DbSet<OrganizationSettings> OrganizationSettings => Set<OrganizationSettings>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -281,5 +285,155 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         // AuditLog — no FK constraints, append-only
         builder.Entity<AuditLog>()
             .HasIndex(a => new { a.OrganizationId, a.Timestamp });
+
+        // ReportingPeriod
+        builder.Entity<ReportingPeriod>()
+            .HasIndex(r => r.OrganizationId);
+
+        // CashflowEntry — additive Fee/Expense columns
+        builder.Entity<CashflowEntry>()
+            .Property(e => e.FeeAmount).HasPrecision(18, 6);
+
+        builder.Entity<CashflowEntry>()
+            .Property(e => e.ExpenseAmount).HasPrecision(18, 6);
+
+        // ForecastRun → ReportingPeriod (optional)
+        builder.Entity<ForecastRun>()
+            .HasOne(r => r.ReportingPeriod)
+            .WithMany()
+            .HasForeignKey(r => r.ReportingPeriodId)
+            .OnDelete(DeleteBehavior.SetNull)
+            .IsRequired(false);
+
+        // ActualRun → ReportingPeriod (optional)
+        builder.Entity<ActualRun>()
+            .HasOne(r => r.ReportingPeriodEntity)
+            .WithMany()
+            .HasForeignKey(r => r.ReportingPeriodId)
+            .OnDelete(DeleteBehavior.SetNull)
+            .IsRequired(false);
+
+        // VarianceAnalysis → ReportingPeriod (optional)
+        builder.Entity<VarianceAnalysis>()
+            .HasOne(v => v.ReportingPeriod)
+            .WithMany()
+            .HasForeignKey(v => v.ReportingPeriodId)
+            .OnDelete(DeleteBehavior.SetNull)
+            .IsRequired(false);
+
+        // CommentaryPack → ReportingPeriod (optional)
+        builder.Entity<CommentaryPack>()
+            .HasOne(c => c.ReportingPeriod)
+            .WithMany()
+            .HasForeignKey(c => c.ReportingPeriodId)
+            .OnDelete(DeleteBehavior.SetNull)
+            .IsRequired(false);
+
+        // Scenario → ReportingPeriod (optional) + scope FKs + extra timing columns
+        builder.Entity<Scenario>()
+            .HasOne(s => s.ReportingPeriod)
+            .WithMany()
+            .HasForeignKey(s => s.ReportingPeriodId)
+            .OnDelete(DeleteBehavior.SetNull)
+            .IsRequired(false);
+
+        builder.Entity<Scenario>()
+            .HasOne<Portfolio>()
+            .WithMany()
+            .HasForeignKey(s => s.ScopePortfolioId)
+            .OnDelete(DeleteBehavior.SetNull)
+            .IsRequired(false);
+
+        builder.Entity<Scenario>()
+            .HasOne<Fund>()
+            .WithMany()
+            .HasForeignKey(s => s.ScopeFundId)
+            .OnDelete(DeleteBehavior.SetNull)
+            .IsRequired(false);
+
+        builder.Entity<Scenario>()
+            .HasOne<Strategy>()
+            .WithMany()
+            .HasForeignKey(s => s.ScopeStrategyId)
+            .OnDelete(DeleteBehavior.SetNull)
+            .IsRequired(false);
+
+        // NavSnapshot
+        builder.Entity<NavSnapshot>()
+            .HasOne(n => n.Portfolio)
+            .WithMany()
+            .HasForeignKey(n => n.PortfolioId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<NavSnapshot>()
+            .HasOne(n => n.Fund)
+            .WithMany()
+            .HasForeignKey(n => n.FundId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<NavSnapshot>()
+            .HasOne(n => n.ReportingPeriod)
+            .WithMany()
+            .HasForeignKey(n => n.ReportingPeriodId)
+            .OnDelete(DeleteBehavior.SetNull)
+            .IsRequired(false);
+
+        builder.Entity<NavSnapshot>()
+            .HasOne(n => n.SourceUploadedFile)
+            .WithMany()
+            .HasForeignKey(n => n.SourceUploadedFileId)
+            .OnDelete(DeleteBehavior.SetNull)
+            .IsRequired(false);
+
+        builder.Entity<NavSnapshot>()
+            .Property(n => n.NavAmount).HasPrecision(18, 6);
+
+        builder.Entity<NavSnapshot>()
+            .Property(n => n.UnfundedCommitment).HasPrecision(18, 6);
+
+        builder.Entity<NavSnapshot>()
+            .Property(n => n.PaidInCapital).HasPrecision(18, 6);
+
+        builder.Entity<NavSnapshot>()
+            .Property(n => n.TotalDistributions).HasPrecision(18, 6);
+
+        builder.Entity<NavSnapshot>()
+            .HasIndex(n => n.OrganizationId);
+
+        builder.Entity<NavSnapshot>()
+            .HasIndex(n => n.FundId);
+
+        // ValidationIssue
+        builder.Entity<ValidationIssue>()
+            .HasOne(v => v.UploadedFile)
+            .WithMany()
+            .HasForeignKey(v => v.UploadedFileId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<ValidationIssue>()
+            .HasIndex(v => v.OrganizationId);
+
+        builder.Entity<ValidationIssue>()
+            .HasIndex(v => v.UploadedFileId);
+
+        // OrganizationSettings — one row per organization
+        builder.Entity<OrganizationSettings>()
+            .HasOne(s => s.Organization)
+            .WithMany()
+            .HasForeignKey(s => s.OrganizationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<OrganizationSettings>()
+            .HasIndex(s => s.OrganizationId)
+            .IsUnique();
+
+        builder.Entity<OrganizationSettings>()
+            .Property(s => s.MaterialVarianceAmount).HasPrecision(18, 6);
+
+        builder.Entity<OrganizationSettings>()
+            .Property(s => s.MaterialVariancePct).HasPrecision(10, 4);
+
+        builder.Entity<OrganizationSettings>()
+            .Property(s => s.WatchpointThresholdPct).HasPrecision(10, 4);
     }
 }

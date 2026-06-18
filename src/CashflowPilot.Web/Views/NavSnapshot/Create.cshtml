@@ -1,0 +1,63 @@
+@model CashflowPilot.Web.Models.CreateNavSnapshotViewModel
+@{ ViewData["Title"] = "Record NAV Snapshot"; }
+
+<div class="row justify-content-center">
+<div class="col-lg-7">
+<div class="card">
+    <div class="card-header"><i class="bi bi-graph-up me-2"></i>Record NAV Snapshot</div>
+    <div class="card-body">
+        <form asp-action="Create" method="post">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="PortfolioId" class="form-label fw-semibold">Portfolio</label>
+                    <select asp-for="PortfolioId" class="form-select" asp-items="@(new SelectList(Model.Portfolios, "Id", "Name"))">
+                        <option value="">-- Select Portfolio --</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="FundId" class="form-label fw-semibold">Fund</label>
+                    <select asp-for="FundId" class="form-select" asp-items="@(new SelectList(Model.Funds, "Id", "Name"))">
+                        <option value="">-- Select Fund --</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="ValuationDate" class="form-label fw-semibold">Valuation Date</label>
+                    <input asp-for="ValuationDate" type="date" class="form-control" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="ReportingPeriodId" class="form-label fw-semibold">Reporting Period <span class="text-muted small">(optional)</span></label>
+                    <select asp-for="ReportingPeriodId" class="form-select" asp-items="@(new SelectList(Model.ReportingPeriods, "Id", "Name"))">
+                        <option value="">-- Not set --</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="NavAmount" class="form-label fw-semibold">NAV Amount</label>
+                    <input asp-for="NavAmount" type="number" step="0.01" class="form-control" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="UnfundedCommitment" class="form-label fw-semibold">Unfunded Commitment</label>
+                    <input asp-for="UnfundedCommitment" type="number" step="0.01" class="form-control" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="PaidInCapital" class="form-label fw-semibold">Paid-In Capital</label>
+                    <input asp-for="PaidInCapital" type="number" step="0.01" class="form-control" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="TotalDistributions" class="form-label fw-semibold">Total Distributions</label>
+                    <input asp-for="TotalDistributions" type="number" step="0.01" class="form-control" />
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Currency" class="form-label fw-semibold">Currency</label>
+                    <input asp-for="Currency" class="form-control" />
+                </div>
+            </div>
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Snapshot</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+</div>

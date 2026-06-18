@@ -10,6 +10,8 @@ public class VarianceAnalysis
     public ForecastRun ForecastRun { get; set; } = null!;
     public int ActualRunId { get; set; }
     public ActualRun ActualRun { get; set; } = null!;
+    public int? ReportingPeriodId { get; set; }
+    public ReportingPeriod? ReportingPeriod { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string CreatedByUserId { get; set; } = string.Empty;
     public AnalysisStatus Status { get; set; } = AnalysisStatus.Pending;

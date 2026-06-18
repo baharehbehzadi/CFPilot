@@ -20,6 +20,8 @@ public class CashflowEntry
     public EntryType EntryType { get; set; }
     public decimal CapitalCalls { get; set; }
     public decimal Distributions { get; set; }
+    public decimal FeeAmount { get; set; }
+    public decimal ExpenseAmount { get; set; }
     public decimal NetCashflow => Distributions - CapitalCalls;
     public string Currency { get; set; } = "USD";
     public string? Notes { get; set; }

@@ -1,0 +1,53 @@
+@model CashflowPilot.Web.Models.NavSnapshotListViewModel
+@{ ViewData["Title"] = "NAV Snapshots"; }
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">NAV Snapshots</h5>
+    @if (User.IsInRole("Admin") || User.IsInRole("Analyst"))
+    {
+        <a asp-action="Create" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Record Snapshot</a>
+    }
+</div>
+
+<div class="alert alert-info small">
+    <i class="bi bi-info-circle me-1"></i>
+    Track fund-level NAV alongside cashflow forecasts and actuals. This is a foundational feature — full NAV-based
+    reporting (NAV bridge, IRR/TVPI) is planned for a future release.
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead><tr><th>Valuation Date</th><th>Fund</th><th>Portfolio</th><th class="text-end">NAV</th><th class="text-end">Unfunded</th><th class="text-end">Paid-In</th><th class="text-end">Distributions</th><th>Currency</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var s in Model.Snapshots)
+                {
+                    <tr>
+                        <td class="text-nowrap">@s.ValuationDate.ToString("dd MMM yyyy")</td>
+                        <td>@s.Fund?.Name</td>
+                        <td>@s.Portfolio?.Name</td>
+                        <td class="text-end">@s.NavAmount.ToString("N0")</td>
+                        <td class="text-end">@s.UnfundedCommitment.ToString("N0")</td>
+                        <td class="text-end">@s.PaidInCapital.ToString("N0")</td>
+                        <td class="text-end">@s.TotalDistributions.ToString("N0")</td>
+                        <td>@s.Currency</td>
+                        <td class="text-end">
+                            @if (User.IsInRole("Admin") || User.IsInRole("Analyst"))
+                            {
+                                <form asp-action="Delete" asp-route-id="@s.Id" method="post" class="d-inline" onsubmit="return confirm('Delete this NAV snapshot?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Snapshots.Any())
+                {
+                    <tr><td colspan="9" class="text-center text-muted py-4">No NAV snapshots recorded yet</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -35,6 +35,20 @@ public enum AnalysisStatus
     Failed
 }
 
+public enum PeriodFrequency
+{
+    Monthly,
+    Quarterly,
+    Annual
+}
+
+public enum ValidationSeverity
+{
+    Info,
+    Warning,
+    Error
+}
+
 public static class Roles
 {
     public const string Admin = "Admin";

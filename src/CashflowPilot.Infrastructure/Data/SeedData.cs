@@ -44,6 +44,13 @@ public static class SeedData
 
         var organization = await db.Organizations.FirstAsync();
 
+        // Seed default organization settings (variance thresholds, watchpoint config)
+        if (!await db.OrganizationSettings.AnyAsync(s => s.OrganizationId == organization.Id))
+        {
+            db.OrganizationSettings.Add(new OrganizationSettings { OrganizationId = organization.Id });
+            await db.SaveChangesAsync();
+        }
+
         // Seed users
         async Task EnsureUser(string email, string password, string displayName, string role)
         {
