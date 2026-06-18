@@ -49,6 +49,7 @@ builder.Services.AddScoped<ICsvParserService, CsvParserService>();
 builder.Services.AddScoped<IUploadService, UploadService>();
 builder.Services.AddScoped<IVarianceService, VarianceService>();
 builder.Services.AddScoped<IScenarioService, ScenarioService>();
+builder.Services.AddScoped<ICommentaryGenerator, RuleBasedCommentaryGenerator>();
 builder.Services.AddScoped<ICommentaryService, CommentaryService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IReportExportService, ReportExportService>();
