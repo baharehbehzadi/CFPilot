@@ -1,3 +1,5 @@
+using CashflowPilot.Domain.Enums;
+
 namespace CashflowPilot.Application.DTOs;
 
 public class ParseResultDto
@@ -10,6 +12,8 @@ public class ParseResultDto
     public List<string> GlobalErrors { get; set; } = new();
     public List<string> DetectedHeaders { get; set; } = new();
     public ColumnMapping? Mapping { get; set; }
+    public int WarningRowCount => Rows.Count(r => r.Issues.Any(i => i.Severity == ValidationSeverity.Warning));
+    public int InfoRowCount => Rows.Count(r => r.Issues.Any(i => i.Severity == ValidationSeverity.Info));
 }
 
 public class ColumnMapping

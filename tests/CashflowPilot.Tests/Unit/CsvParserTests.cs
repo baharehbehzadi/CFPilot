@@ -1,4 +1,5 @@
 using CashflowPilot.Application.DTOs;
+using CashflowPilot.Domain.Enums;
 using CashflowPilot.Infrastructure.Services;
 using FluentAssertions;
 using System.Text;
@@ -134,5 +135,58 @@ public class CsvParserTests
         mapping.PeriodColumn.Should().Be("reporting_period");
         mapping.CapitalCallsColumn.Should().Be("contributions");
         mapping.DistributionsColumn.Should().Be("dist");
+    }
+
+    [Fact]
+    public void Parse_InvalidPeriod_TagsIssueAsError()
+    {
+        var csv = "Fund,Period,Capital Calls,Distributions\nTest Fund,not-a-date,1000000,0\n";
+        var result = CreateParser().Parse(ToStream(csv));
+        result.Rows[0].Issues.Should().ContainSingle(i => i.Severity == ValidationSeverity.Error && i.FieldName == "Period");
+        result.Rows[0].IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Parse_BlankFundName_TagsWarning_ButRowStillValid()
+    {
+        var csv = "Fund,Period,Capital Calls,Distributions\n,2024-01,1000000,0\n";
+        var result = CreateParser().Parse(ToStream(csv));
+        result.ValidRows.Should().Be(1);
+        result.Rows[0].Issues.Should().ContainSingle(i => i.Severity == ValidationSeverity.Warning && i.FieldName == "FundName");
+    }
+
+    [Fact]
+    public void Parse_NegativeCapitalCalls_TagsWarning()
+    {
+        var csv = "Fund,Period,Capital Calls,Distributions\nTest Fund,2024-01,-500000,0\n";
+        var result = CreateParser().Parse(ToStream(csv));
+        result.ValidRows.Should().Be(1);
+        result.Rows[0].Issues.Should().Contain(i => i.Severity == ValidationSeverity.Warning && i.FieldName == "CapitalCalls");
+    }
+
+    [Fact]
+    public void Parse_ZeroActivityRow_TagsInfo()
+    {
+        var csv = "Fund,Period,Capital Calls,Distributions\nTest Fund,2024-01,0,0\n";
+        var result = CreateParser().Parse(ToStream(csv));
+        result.Rows[0].Issues.Should().Contain(i => i.Severity == ValidationSeverity.Info);
+        result.ValidRows.Should().Be(1);
+    }
+
+    [Fact]
+    public void Parse_UnusualCurrencyCode_TagsWarning()
+    {
+        var csv = "Fund,Period,Capital Calls,Distributions,Currency\nTest Fund,2024-01,500000,0,US\n";
+        var result = CreateParser().Parse(ToStream(csv));
+        result.Rows[0].Issues.Should().Contain(i => i.Severity == ValidationSeverity.Warning && i.FieldName == "Currency");
+    }
+
+    [Fact]
+    public void Parse_DuplicateFundPeriod_TagsWarningOnSecondRow()
+    {
+        var csv = "Fund,Period,Capital Calls,Distributions\nTest Fund,2024-01,500000,0\nTest Fund,2024-01,600000,0\n";
+        var result = CreateParser().Parse(ToStream(csv));
+        result.Rows[0].Issues.Should().BeEmpty();
+        result.Rows[1].Issues.Should().Contain(i => i.Severity == ValidationSeverity.Warning && i.FieldName == "Period");
     }
 }

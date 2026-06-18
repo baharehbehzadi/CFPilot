@@ -1,3 +1,4 @@
+@using CashflowPilot.Domain.Enums
 @model CashflowPilot.Web.Models.ValidationResultViewModel
 @{ ViewData["Title"] = "Validate &amp; Import"; }
 
@@ -10,7 +11,15 @@
             <span class="badge bg-success">@Model.ParseResult.ValidRows valid</span>
             @if (Model.ParseResult.InvalidRows > 0)
             {
-                <span class="badge bg-danger">@Model.ParseResult.InvalidRows invalid</span>
+                <span class="badge bg-danger">@Model.ParseResult.InvalidRows error</span>
+            }
+            @if (Model.ParseResult.WarningRowCount > 0)
+            {
+                <span class="badge bg-warning text-dark">@Model.ParseResult.WarningRowCount warning</span>
+            }
+            @if (Model.ParseResult.InfoRowCount > 0)
+            {
+                <span class="badge bg-info text-dark">@Model.ParseResult.InfoRowCount info</span>
             }
             <span class="badge bg-secondary">@Model.ParseResult.TotalRows total</span>
         </div>
@@ -30,6 +39,8 @@
                 <strong>@Model.ParseResult.ValidRows rows ready to import.</strong>
                 @if (Model.ParseResult.InvalidRows > 0)
                 { <span>@Model.ParseResult.InvalidRows rows have errors and will be skipped.</span> }
+                @if (Model.ParseResult.WarningRowCount > 0)
+                { <span>@Model.ParseResult.WarningRowCount rows have warnings but will still be imported.</span> }
             </div>
             <form asp-action="Import" method="post">
                 <input type="hidden" name="UploadedFileId" value="@Model.UploadedFileId" />
@@ -58,7 +69,10 @@
                 <tbody>
                     @foreach (var row in Model.ParseResult.Rows.Take(200))
                     {
-                        <tr class="@(row.IsValid ? "" : "table-danger")">
+                        var hasError = row.Issues.Any(i => i.Severity == ValidationSeverity.Error);
+                        var hasWarning = row.Issues.Any(i => i.Severity == ValidationSeverity.Warning);
+                        var rowClass = hasError ? "table-danger" : hasWarning ? "table-warning" : "";
+                        <tr class="@rowClass">
                             <td class="text-muted">@row.RowNumber</td>
                             <td>@(row.FundName ?? "-")</td>
                             <td>@(row.StrategyName ?? "-")</td>
@@ -67,10 +81,18 @@
                             <td class="text-end font-monospace">@(row.DistributionsAmount?.ToString("N0") ?? "-")</td>
                             <td>@(row.Currency ?? "USD")</td>
                             <td>
-                                @if (row.IsValid)
+                                @if (!row.Issues.Any())
                                 { <span class="badge bg-success-subtle text-success">OK</span> }
                                 else
-                                { <span class="badge bg-danger-subtle text-danger" title="@string.Join("; ", row.ValidationErrors)">Error</span> }
+                                {
+                                    var tooltip = string.Join("; ", row.Issues.Select(i => $"[{i.Severity}] {i.Message}"));
+                                    if (hasError)
+                                    { <span class="badge bg-danger-subtle text-danger" title="@tooltip">Error</span> }
+                                    else if (hasWarning)
+                                    { <span class="badge bg-warning-subtle text-warning-emphasis" title="@tooltip">Warning</span> }
+                                    else
+                                    { <span class="badge bg-info-subtle text-info-emphasis" title="@tooltip">Info</span> }
+                                }
                             </td>
                         </tr>
                     }

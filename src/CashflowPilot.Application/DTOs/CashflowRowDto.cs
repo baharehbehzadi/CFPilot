@@ -1,4 +1,14 @@
+using CashflowPilot.Domain.Enums;
+
 namespace CashflowPilot.Application.DTOs;
+
+public class RowValidationIssueDto
+{
+    public ValidationSeverity Severity { get; set; }
+    public string? FieldName { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public string? SuggestedFix { get; set; }
+}
 
 public class CashflowRowDto
 {
@@ -13,6 +23,7 @@ public class CashflowRowDto
     public string? Currency { get; set; }
     public string? Notes { get; set; }
     public int RowNumber { get; set; }
-    public List<string> ValidationErrors { get; set; } = new();
-    public bool IsValid => ValidationErrors.Count == 0;
+    public List<RowValidationIssueDto> Issues { get; set; } = new();
+    public List<string> ValidationErrors => Issues.Where(i => i.Severity == ValidationSeverity.Error).Select(i => i.Message).ToList();
+    public bool IsValid => !Issues.Any(i => i.Severity == ValidationSeverity.Error);
 }

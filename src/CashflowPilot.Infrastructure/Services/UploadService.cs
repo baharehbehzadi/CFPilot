@@ -13,6 +13,8 @@ public interface IUploadService
     Task<ParseResultDto> ParseFileAsync(int uploadedFileId, ColumnMapping? mapping, int organizationId);
     Task<int> ImportForecastAsync(int uploadedFileId, string runName, int portfolioId, string userId, int organizationId, ColumnMapping? mapping = null);
     Task<int> ImportActualAsync(int uploadedFileId, string runName, DateTime reportingPeriod, int portfolioId, string userId, int organizationId, ColumnMapping? mapping = null);
+    Task<List<ValidationIssue>> GetValidationIssuesAsync(int organizationId, int? uploadedFileId = null);
+    Task SetIssueAcceptedAsync(int issueId, int organizationId, bool accepted);
 }
 
 public class UploadService : IUploadService
@@ -62,6 +64,8 @@ public class UploadService : IUploadService
         var parseResult = await ParseFileAsync(uploadedFileId, mapping, organizationId);
         if (!parseResult.Success && parseResult.ValidRows == 0)
             throw new InvalidOperationException("No valid rows to import. " + string.Join(" ", parseResult.GlobalErrors));
+
+        await PersistValidationIssuesAsync(uploadedFileId, organizationId, parseResult);
 
         var run = new ForecastRun
         {
@@ -122,6 +126,8 @@ public class UploadService : IUploadService
         if (!parseResult.Success && parseResult.ValidRows == 0)
             throw new InvalidOperationException("No valid rows to import. " + string.Join(" ", parseResult.GlobalErrors));
 
+        await PersistValidationIssuesAsync(uploadedFileId, organizationId, parseResult);
+
         var run = new ActualRun
         {
             OrganizationId = organizationId,
@@ -174,6 +180,43 @@ public class UploadService : IUploadService
         if (uploadedFile != null) { uploadedFile.Status = FileStatus.Processed; await _db.SaveChangesAsync(); }
 
         return run.Id;
+    }
+
+    private async Task PersistValidationIssuesAsync(int uploadedFileId, int organizationId, ParseResultDto parseResult)
+    {
+        var issues = parseResult.Rows
+            .SelectMany(r => r.Issues.Select(i => new ValidationIssue
+            {
+                OrganizationId = organizationId,
+                UploadedFileId = uploadedFileId,
+                Severity = i.Severity,
+                RowNumber = r.RowNumber,
+                FieldName = i.FieldName,
+                Message = i.Message,
+                SuggestedFix = i.SuggestedFix
+            }))
+            .ToList();
+
+        if (issues.Count == 0) return;
+
+        _db.ValidationIssues.AddRange(issues);
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task<List<ValidationIssue>> GetValidationIssuesAsync(int organizationId, int? uploadedFileId = null)
+    {
+        var query = _db.ValidationIssues.Include(v => v.UploadedFile).Where(v => v.OrganizationId == organizationId);
+        if (uploadedFileId.HasValue)
+            query = query.Where(v => v.UploadedFileId == uploadedFileId.Value);
+        return await query.OrderByDescending(v => v.CreatedAt).ToListAsync();
+    }
+
+    public async Task SetIssueAcceptedAsync(int issueId, int organizationId, bool accepted)
+    {
+        var issue = await _db.ValidationIssues.FirstOrDefaultAsync(v => v.Id == issueId && v.OrganizationId == organizationId);
+        if (issue == null) return;
+        issue.IsAccepted = accepted;
+        await _db.SaveChangesAsync();
     }
 
     private async Task<Fund> GetOrCreateFundAsync(string? fundName, int portfolioId, int organizationId, Dictionary<string, Fund> cache)

@@ -55,6 +55,9 @@
             <a asp-controller="NavSnapshot" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "NavSnapshot" ? "active" : "")">
                 <i class="bi bi-graph-up"></i> NAV Snapshots
             </a>
+            <a asp-controller="Upload" asp-action="ValidationIssues" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Upload" && ViewContext.RouteData.Values["action"]?.ToString() == "ValidationIssues" ? "active" : "")">
+                <i class="bi bi-exclamation-triangle"></i> Validation Issues
+            </a>
             <div class="nav-section">Analysis</div>
             <a asp-controller="Analysis" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Analysis" ? "active" : "")">
                 <i class="bi bi-bar-chart-line"></i> Variance Analysis

@@ -1,5 +1,6 @@
 using CashflowPilot.Application.DTOs;
 using CashflowPilot.Application.Interfaces;
+using CashflowPilot.Domain.Entities;
 using CashflowPilot.Domain.Enums;
 using CashflowPilot.Infrastructure.Services;
 using CashflowPilot.Infrastructure.Data;
@@ -172,7 +173,11 @@ public class UploadController : Controller
                 runId = await _uploadService.ImportActualAsync(model.UploadedFileId, model.RunName, model.ReportingPeriod ?? DateTime.UtcNow, model.PortfolioId, user.Id, orgId);
                 await _audit.LogAsync(orgId, user.Id, user.DisplayName, "Import", "ActualRun", runId.ToString(), $"Imported actual run: {model.RunName}");
             }
-            TempData["Success"] = $"{model.FileType} run '{model.RunName}' imported successfully ({runId}).";
+
+            var issueCount = (await _uploadService.GetValidationIssuesAsync(orgId, model.UploadedFileId)).Count;
+            TempData["Success"] = issueCount > 0
+                ? $"{model.FileType} run '{model.RunName}' imported successfully ({runId}). {issueCount} validation issue(s) were noted — see the Validation Issues page."
+                : $"{model.FileType} run '{model.RunName}' imported successfully ({runId}).";
             return RedirectToAction("Index", "Analysis");
         }
         catch (Exception ex)
@@ -180,5 +185,31 @@ public class UploadController : Controller
             TempData["Error"] = $"Import failed: {ex.Message}";
             return RedirectToAction(model.FileType == "Forecast" ? "UploadForecast" : "UploadActual");
         }
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ValidationIssues(string? severity, int page = 1)
+    {
+        var (_, orgId) = await GetUserAsync();
+        var issues = await _uploadService.GetValidationIssuesAsync(orgId);
+
+        if (!string.IsNullOrWhiteSpace(severity) && Enum.TryParse<ValidationSeverity>(severity, true, out var parsedSeverity))
+            issues = issues.Where(i => i.Severity == parsedSeverity).ToList();
+
+        const int pageSize = 50;
+        ViewBag.TotalCount = issues.Count;
+        ViewBag.Page = page;
+        ViewBag.PageSize = pageSize;
+        ViewBag.SelectedSeverity = severity;
+        var paged = issues.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+        return View(paged);
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> AcceptValidationIssue(int id, bool accepted, string? severity, int page = 1)
+    {
+        var (_, orgId) = await GetUserAsync();
+        await _uploadService.SetIssueAcceptedAsync(id, orgId, accepted);
+        return RedirectToAction("ValidationIssues", new { severity, page });
     }
 }

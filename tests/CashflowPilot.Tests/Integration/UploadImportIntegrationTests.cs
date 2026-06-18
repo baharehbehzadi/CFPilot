@@ -141,6 +141,40 @@ public class UploadImportIntegrationTests
     }
 
     [Fact]
+    public async Task Import_PersistsValidationIssues_AndSupportsAcceptWorkflow()
+    {
+        var (db, uploadService) = SetupServices();
+        var org = new Organization { Name = "Test Org 5", CreatedAt = DateTime.UtcNow };
+        db.Organizations.Add(org);
+        db.SaveChanges();
+        var portfolio = new Portfolio { OrganizationId = org.Id, Name = "Portfolio", CreatedAt = DateTime.UtcNow };
+        db.Portfolios.Add(portfolio);
+        db.SaveChanges();
+
+        var csv = "Fund,Period,Capital Calls,Distributions\n" +
+                  "Fund A,2024-01,1000000,0\n" +        // valid, no issues
+                  "Fund B,not-a-date,500000,0\n" +       // error: bad period
+                  ",2024-02,-200000,0\n";                 // warning: blank fund + negative calls
+
+        var fileId = await uploadService.SaveUploadAsync(CreateFormFile(csv), FileType.ForecastCsv, portfolio.Id, "user1", org.Id);
+        var runId = await uploadService.ImportForecastAsync(fileId, "Run with issues", portfolio.Id, "user1", org.Id);
+        runId.Should().BeGreaterThan(0);
+
+        var issues = await uploadService.GetValidationIssuesAsync(org.Id, fileId);
+        issues.Should().NotBeEmpty();
+        issues.Should().Contain(i => i.Severity == ValidationSeverity.Error);
+        issues.Should().Contain(i => i.Severity == ValidationSeverity.Warning);
+        issues.Should().OnlyContain(i => i.UploadedFileId == fileId && i.OrganizationId == org.Id);
+
+        var firstIssue = issues.First();
+        firstIssue.IsAccepted.Should().BeFalse();
+        await uploadService.SetIssueAcceptedAsync(firstIssue.Id, org.Id, true);
+
+        var refreshed = await uploadService.GetValidationIssuesAsync(org.Id, fileId);
+        refreshed.First(i => i.Id == firstIssue.Id).IsAccepted.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task Import_SameFundUploadedTwice_ReusesFundEntity()
     {
         var (db, uploadService) = SetupServices();

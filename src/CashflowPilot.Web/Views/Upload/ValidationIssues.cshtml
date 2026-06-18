@@ -1,0 +1,90 @@
+@using CashflowPilot.Domain.Entities
+@using CashflowPilot.Domain.Enums
+@model List<ValidationIssue>
+@{
+    ViewData["Title"] = "Validation Issues";
+    int page = ViewBag.Page;
+    int pageSize = ViewBag.PageSize;
+    int total = ViewBag.TotalCount;
+    string? selectedSeverity = ViewBag.SelectedSeverity;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">Validation Issues</h5>
+    <span class="text-muted small">@total entries</span>
+</div>
+
+<div class="alert alert-info small">
+    <i class="bi bi-info-circle me-1"></i>
+    Issues found while parsing uploaded files are recorded here at import time. Errors block a row from being
+    imported; Warnings and Info items are imported but flagged for your review.
+</div>
+
+<div class="mb-3 d-flex gap-2">
+    <a asp-action="ValidationIssues" class="btn btn-sm @(selectedSeverity == null ? "btn-secondary" : "btn-outline-secondary")">All</a>
+    <a asp-action="ValidationIssues" asp-route-severity="Error" class="btn btn-sm @(selectedSeverity == "Error" ? "btn-danger" : "btn-outline-danger")">Error</a>
+    <a asp-action="ValidationIssues" asp-route-severity="Warning" class="btn btn-sm @(selectedSeverity == "Warning" ? "btn-warning" : "btn-outline-warning")">Warning</a>
+    <a asp-action="ValidationIssues" asp-route-severity="Info" class="btn btn-sm @(selectedSeverity == "Info" ? "btn-info" : "btn-outline-info")">Info</a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead><tr><th>Severity</th><th>File</th><th>Row</th><th>Field</th><th>Message</th><th>Suggested Fix</th><th>Accepted</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var issue in Model)
+                {
+                    <tr>
+                        <td>
+                            @{
+                                var badgeClass = issue.Severity switch
+                                {
+                                    ValidationSeverity.Error => "bg-danger",
+                                    ValidationSeverity.Warning => "bg-warning text-dark",
+                                    _ => "bg-info text-dark"
+                                };
+                            }
+                            <span class="badge @badgeClass">@issue.Severity</span>
+                        </td>
+                        <td class="small text-muted">@issue.UploadedFile?.OriginalFileName</td>
+                        <td class="small">@(issue.RowNumber?.ToString() ?? "-")</td>
+                        <td class="small">@(issue.FieldName ?? "-")</td>
+                        <td class="small">@issue.Message</td>
+                        <td class="small text-muted">@issue.SuggestedFix</td>
+                        <td>
+                            @if (issue.IsAccepted)
+                            { <span class="badge bg-success-subtle text-success">Accepted</span> }
+                            else
+                            { <span class="badge bg-light text-muted">Pending</span> }
+                        </td>
+                        <td class="text-end">
+                            <form asp-action="AcceptValidationIssue" method="post" class="d-inline">
+                                <input type="hidden" name="id" value="@issue.Id" />
+                                <input type="hidden" name="accepted" value="@(!issue.IsAccepted)" />
+                                <input type="hidden" name="severity" value="@selectedSeverity" />
+                                <input type="hidden" name="page" value="@(page)" />
+                                <button type="submit" class="btn btn-sm btn-outline-secondary">@(issue.IsAccepted ? "Unaccept" : "Accept")</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="8" class="text-center text-muted py-4">No validation issues recorded</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @if (total > pageSize)
+    {
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <small class="text-muted">Page @(page) of @((int)Math.Ceiling((double)total/pageSize))</small>
+            <div>
+                @if (page > 1) { <a asp-action="ValidationIssues" asp-route-page="@(page-1)" asp-route-severity="@selectedSeverity" class="btn btn-sm btn-outline-secondary me-1">← Prev</a> }
+                @if (page * pageSize < total) { <a asp-action="ValidationIssues" asp-route-page="@(page+1)" asp-route-severity="@selectedSeverity" class="btn btn-sm btn-outline-secondary">Next →</a> }
+            </div>
+        </div>
+    }
+</div>

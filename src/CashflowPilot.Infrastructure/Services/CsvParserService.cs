@@ -1,4 +1,5 @@
 using CashflowPilot.Application.DTOs;
+using CashflowPilot.Domain.Enums;
 using CsvHelper;
 using CsvHelper.Configuration;
 using System.Globalization;
@@ -46,6 +47,7 @@ public class CsvParserService : ICsvParserService
             }
 
             int rowNum = 1;
+            var seenFundPeriods = new Dictionary<(string fund, DateTime period), int>();
             while (csv.Read())
             {
                 rowNum++;
@@ -68,7 +70,12 @@ public class CsvParserService : ICsvParserService
                 // Validate Period
                 row.PeriodDate = TryParseDate(row.Period);
                 if (row.PeriodDate == null)
-                    row.ValidationErrors.Add($"Row {rowNum}: Cannot parse period '{row.Period}'. Expected formats: yyyy-MM, MM/yyyy, MMM-yyyy, Q1 yyyy.");
+                    row.Issues.Add(new RowValidationIssueDto
+                    {
+                        Severity = ValidationSeverity.Error, FieldName = "Period",
+                        Message = $"Row {rowNum}: Cannot parse period '{row.Period}'. Expected formats: yyyy-MM, MM/yyyy, MMM-yyyy, Q1 yyyy.",
+                        SuggestedFix = "Use a format such as 2024-01, Mar-2024, or Q1 2024."
+                    });
 
                 // Validate amounts
                 if (!string.IsNullOrWhiteSpace(row.CapitalCalls))
@@ -76,7 +83,12 @@ public class CsvParserService : ICsvParserService
                     if (TryParseAmount(row.CapitalCalls, out var amount))
                         row.CapitalCallsAmount = amount;
                     else
-                        row.ValidationErrors.Add($"Row {rowNum}: Cannot parse capital calls amount '{row.CapitalCalls}'.");
+                        row.Issues.Add(new RowValidationIssueDto
+                        {
+                            Severity = ValidationSeverity.Error, FieldName = "CapitalCalls",
+                            Message = $"Row {rowNum}: Cannot parse capital calls amount '{row.CapitalCalls}'.",
+                            SuggestedFix = "Use a plain number, optionally with commas or accounting parentheses for negatives."
+                        });
                 }
                 else
                 {
@@ -88,11 +100,93 @@ public class CsvParserService : ICsvParserService
                     if (TryParseAmount(row.Distributions, out var amount))
                         row.DistributionsAmount = amount;
                     else
-                        row.ValidationErrors.Add($"Row {rowNum}: Cannot parse distributions amount '{row.Distributions}'.");
+                        row.Issues.Add(new RowValidationIssueDto
+                        {
+                            Severity = ValidationSeverity.Error, FieldName = "Distributions",
+                            Message = $"Row {rowNum}: Cannot parse distributions amount '{row.Distributions}'.",
+                            SuggestedFix = "Use a plain number, optionally with commas or accounting parentheses for negatives."
+                        });
                 }
                 else
                 {
                     row.DistributionsAmount = 0;
+                }
+
+                // Extended validations (non-blocking severity tiers)
+                if (string.IsNullOrWhiteSpace(row.FundName))
+                {
+                    row.Issues.Add(new RowValidationIssueDto
+                    {
+                        Severity = ValidationSeverity.Warning, FieldName = "FundName",
+                        Message = $"Row {rowNum}: Fund name is blank.",
+                        SuggestedFix = "Provide a fund name; rows left blank will be grouped under 'Unknown Fund'."
+                    });
+                }
+
+                if (string.IsNullOrWhiteSpace(row.Currency))
+                {
+                    row.Issues.Add(new RowValidationIssueDto
+                    {
+                        Severity = ValidationSeverity.Info, FieldName = "Currency",
+                        Message = $"Row {rowNum}: Currency not specified.",
+                        SuggestedFix = "Defaults to USD."
+                    });
+                }
+                else if (row.Currency.Trim().Length != 3 || !row.Currency.Trim().All(char.IsLetter))
+                {
+                    row.Issues.Add(new RowValidationIssueDto
+                    {
+                        Severity = ValidationSeverity.Warning, FieldName = "Currency",
+                        Message = $"Row {rowNum}: Currency '{row.Currency}' does not look like a valid 3-letter ISO code.",
+                        SuggestedFix = "Use a standard 3-letter code, e.g. USD, EUR, GBP."
+                    });
+                }
+
+                if (row.CapitalCallsAmount is < 0)
+                {
+                    row.Issues.Add(new RowValidationIssueDto
+                    {
+                        Severity = ValidationSeverity.Warning, FieldName = "CapitalCalls",
+                        Message = $"Row {rowNum}: Capital calls amount is negative ({row.CapitalCallsAmount:N0}).",
+                        SuggestedFix = "Confirm this is an intentional adjustment rather than a data entry error."
+                    });
+                }
+
+                if (row.DistributionsAmount is < 0)
+                {
+                    row.Issues.Add(new RowValidationIssueDto
+                    {
+                        Severity = ValidationSeverity.Warning, FieldName = "Distributions",
+                        Message = $"Row {rowNum}: Distributions amount is negative ({row.DistributionsAmount:N0}).",
+                        SuggestedFix = "Confirm this is an intentional clawback rather than a data entry error."
+                    });
+                }
+
+                if (row.CapitalCallsAmount == 0 && row.DistributionsAmount == 0)
+                {
+                    row.Issues.Add(new RowValidationIssueDto
+                    {
+                        Severity = ValidationSeverity.Info, FieldName = null,
+                        Message = $"Row {rowNum}: No capital calls or distributions recorded for this period."
+                    });
+                }
+
+                if (row.PeriodDate.HasValue)
+                {
+                    var key = (row.FundName?.Trim().ToLowerInvariant() ?? "", row.PeriodDate.Value);
+                    if (seenFundPeriods.TryGetValue(key, out var firstRowNum))
+                    {
+                        row.Issues.Add(new RowValidationIssueDto
+                        {
+                            Severity = ValidationSeverity.Warning, FieldName = "Period",
+                            Message = $"Row {rowNum}: Duplicate entry for fund '{row.FundName}' in period {row.PeriodDate:MMM yyyy} (first seen on row {firstRowNum}).",
+                            SuggestedFix = "Verify whether this is an intentional correction or a duplicate row."
+                        });
+                    }
+                    else
+                    {
+                        seenFundPeriods[key] = rowNum;
+                    }
                 }
 
                 if (row.IsValid)
