@@ -7,7 +7,8 @@ public class ScenarioResultDto
     public string Description { get; set; } = string.Empty;
     public decimal CallsAdjustmentPct { get; set; }
     public decimal DistributionsAdjustmentPct { get; set; }
-    public int TimingShiftMonths { get; set; }
+    public int CallsTimingShiftMonths { get; set; }
+    public int DistributionsTimingShiftMonths { get; set; }
     public List<ScenarioPeriodDto> Periods { get; set; } = new();
     public decimal BaselineNetCashflow { get; set; }
     public decimal ScenarioNetCashflow { get; set; }

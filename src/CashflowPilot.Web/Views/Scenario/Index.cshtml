@@ -16,7 +16,7 @@
                 <tr>
                     <th>Name</th><th>Forecast Run</th>
                     <th class="text-end">Calls Adj</th><th class="text-end">Dist Adj</th>
-                    <th class="text-center">Timing Shift</th><th>Created</th><th></th>
+                    <th class="text-center">Timing Shift (Calls / Dist)</th><th>Scope</th><th>Created</th><th></th>
                 </tr>
             </thead>
             <tbody>
@@ -31,7 +31,12 @@
                     <td class="text-end font-monospace small @(sc.DistributionsAdjustmentPct >= 0 ? "text-success" : "text-danger")">
                         @(sc.DistributionsAdjustmentPct >= 0 ? "+" : "")@sc.DistributionsAdjustmentPct.ToString("F1")%
                     </td>
-                    <td class="text-center small">@(sc.TimingShiftMonths == 0 ? "None" : $"{(sc.TimingShiftMonths > 0 ? "+" : "")}{sc.TimingShiftMonths} months")</td>
+                    <td class="text-center small">
+                        @(sc.CallsTimingShiftMonths == 0 ? "None" : $"{(sc.CallsTimingShiftMonths > 0 ? "+" : "")}{sc.CallsTimingShiftMonths}m")
+                        /
+                        @(sc.DistributionsTimingShiftMonths == 0 ? "None" : $"{(sc.DistributionsTimingShiftMonths > 0 ? "+" : "")}{sc.DistributionsTimingShiftMonths}m")
+                    </td>
+                    <td class="text-muted small">@Model.ScopeDescriptions.GetValueOrDefault(sc.Id, "All funds")</td>
                     <td class="text-muted small">@sc.CreatedAt.ToString("dd MMM yyyy")</td>
                     <td>
                         <div class="d-flex gap-1">
@@ -49,7 +54,7 @@
             }
             @if (!Model.Scenarios.Any())
             {
-                <tr><td colspan="7" class="text-center text-muted py-4">No scenarios yet. <a asp-action="Create">Create one</a>.</td></tr>
+                <tr><td colspan="8" class="text-center text-muted py-4">No scenarios yet. <a asp-action="Create">Create one</a>.</td></tr>
             }
             </tbody>
         </table>

@@ -22,67 +22,92 @@ public class ScenarioService : IScenarioService
             .Where(e => e.ForecastRunId == scenario.ForecastRunId && e.OrganizationId == organizationId)
             .ToListAsync();
 
-        return BuildResult(scenario.Id, scenario.Name, scenario.Description ?? string.Empty,
-            scenario.CallsAdjustmentPct, scenario.DistributionsAdjustmentPct, scenario.TimingShiftMonths, entries);
+        var assumptions = new ScenarioAssumptionsDto
+        {
+            CallsAdjustmentPct = scenario.CallsAdjustmentPct,
+            DistributionsAdjustmentPct = scenario.DistributionsAdjustmentPct,
+            CallsTimingShiftMonths = scenario.CallsTimingShiftMonths,
+            DistributionsTimingShiftMonths = scenario.DistributionsTimingShiftMonths,
+            Scope = scenario.Scope,
+            ScopePortfolioId = scenario.ScopePortfolioId,
+            ScopeFundId = scenario.ScopeFundId,
+            ScopeStrategyId = scenario.ScopeStrategyId
+        };
+
+        return BuildResult(scenario.Id, scenario.Name, scenario.Description ?? string.Empty, assumptions, entries);
     }
 
-    public async Task<ScenarioResultDto> PreviewScenarioAsync(int forecastRunId, decimal callsAdjPct, decimal distAdjPct, int timingShiftMonths, int organizationId)
+    public async Task<ScenarioResultDto> PreviewScenarioAsync(int forecastRunId, ScenarioAssumptionsDto assumptions, int organizationId)
     {
         var entries = await _db.CashflowEntries
             .Where(e => e.ForecastRunId == forecastRunId && e.OrganizationId == organizationId)
             .ToListAsync();
 
-        return BuildResult(0, "Preview", "Ad-hoc scenario preview", callsAdjPct, distAdjPct, timingShiftMonths, entries);
+        return BuildResult(0, "Preview", "Ad-hoc scenario preview", assumptions, entries);
     }
 
-    private static ScenarioResultDto BuildResult(int scenarioId, string name, string description,
-        decimal callsAdjPct, decimal distAdjPct, int timingShiftMonths, List<CashflowEntry> entries)
+    private static bool IsInScope(CashflowEntry entry, ScenarioAssumptionsDto a) => a.Scope switch
     {
-        var grouped = entries
-            .GroupBy(e => e.Period)
-            .OrderBy(g => g.Key)
-            .Select(g => new
-            {
-                Period = g.Key,
-                BaselineCalls = g.Sum(e => e.CapitalCalls),
-                BaselineDists = g.Sum(e => e.Distributions)
-            }).ToList();
+        "Portfolio" => entry.PortfolioId == a.ScopePortfolioId,
+        "Fund" => entry.FundId == a.ScopeFundId,
+        "Strategy" => entry.StrategyId == a.ScopeStrategyId,
+        _ => true
+    };
 
-        // Apply pct adjustment to baseline, then shift timing
-        var adjusted = grouped.Select(g => new
+    private static ScenarioResultDto BuildResult(int scenarioId, string name, string description,
+        ScenarioAssumptionsDto a, List<CashflowEntry> entries)
+    {
+        decimal callsFactor = 1 + a.CallsAdjustmentPct / 100m;
+        decimal distFactor = 1 + a.DistributionsAdjustmentPct / 100m;
+
+        var baselineCallsByPeriod = new Dictionary<DateTime, decimal>();
+        var baselineDistByPeriod = new Dictionary<DateTime, decimal>();
+        var scenarioCallsByPeriod = new Dictionary<DateTime, decimal>();
+        var scenarioDistByPeriod = new Dictionary<DateTime, decimal>();
+
+        static void Add(Dictionary<DateTime, decimal> dict, DateTime period, decimal amount) =>
+            dict[period] = dict.TryGetValue(period, out var existing) ? existing + amount : amount;
+
+        // Scoped entries (matching the scenario's fund/strategy/portfolio filter) get the
+        // pct adjustment and timing shift applied; out-of-scope entries pass through unchanged
+        // so the rest of the portfolio stays at baseline in the scenario line.
+        foreach (var entry in entries)
         {
-            OriginalPeriod = g.Period,
-            ShiftedPeriod = g.Period.AddMonths(timingShiftMonths),
-            ScenarioCalls = g.BaselineCalls * (1 + callsAdjPct / 100m),
-            ScenarioDists = g.BaselineDists * (1 + distAdjPct / 100m),
-            g.BaselineCalls,
-            g.BaselineDists
-        }).ToList();
+            Add(baselineCallsByPeriod, entry.Period, entry.CapitalCalls);
+            Add(baselineDistByPeriod, entry.Period, entry.Distributions);
 
-        // Merge baseline periods and scenario periods (scenario may have shifted to new periods)
-        var allPeriods = grouped.Select(g => g.Period)
-            .Union(adjusted.Select(a => a.ShiftedPeriod))
+            bool inScope = IsInScope(entry, a);
+            var callsAmount = inScope ? entry.CapitalCalls * callsFactor : entry.CapitalCalls;
+            var distAmount = inScope ? entry.Distributions * distFactor : entry.Distributions;
+            var callsPeriod = inScope ? entry.Period.AddMonths(a.CallsTimingShiftMonths) : entry.Period;
+            var distPeriod = inScope ? entry.Period.AddMonths(a.DistributionsTimingShiftMonths) : entry.Period;
+
+            Add(scenarioCallsByPeriod, callsPeriod, callsAmount);
+            Add(scenarioDistByPeriod, distPeriod, distAmount);
+        }
+
+        var allPeriods = baselineCallsByPeriod.Keys
+            .Union(baselineDistByPeriod.Keys)
+            .Union(scenarioCallsByPeriod.Keys)
+            .Union(scenarioDistByPeriod.Keys)
             .OrderBy(p => p)
             .ToList();
 
-        var baselineByPeriod = grouped.ToDictionary(g => g.Period, g => (g.BaselineCalls, g.BaselineDists));
-        var scenarioByPeriod = adjusted
-            .GroupBy(a => a.ShiftedPeriod)
-            .ToDictionary(g => g.Key, g => (Calls: g.Sum(a => a.ScenarioCalls), Dists: g.Sum(a => a.ScenarioDists)));
-
         var periods = allPeriods.Select(p =>
         {
-            baselineByPeriod.TryGetValue(p, out var b);
-            scenarioByPeriod.TryGetValue(p, out var s);
-            var baseNet = b.BaselineDists - b.BaselineCalls;
-            var scenNet = s.Dists - s.Calls;
+            var baseCalls = baselineCallsByPeriod.GetValueOrDefault(p);
+            var baseDist = baselineDistByPeriod.GetValueOrDefault(p);
+            var scenCalls = scenarioCallsByPeriod.GetValueOrDefault(p);
+            var scenDist = scenarioDistByPeriod.GetValueOrDefault(p);
+            var baseNet = baseDist - baseCalls;
+            var scenNet = scenDist - scenCalls;
             return new ScenarioPeriodDto
             {
                 Period = p,
-                BaselineCalls = b.BaselineCalls,
-                ScenarioCalls = s.Calls,
-                BaselineDistributions = b.BaselineDists,
-                ScenarioDistributions = s.Dists,
+                BaselineCalls = baseCalls,
+                ScenarioCalls = scenCalls,
+                BaselineDistributions = baseDist,
+                ScenarioDistributions = scenDist,
                 BaselineNet = baseNet,
                 ScenarioNet = scenNet,
                 Delta = scenNet - baseNet
@@ -97,9 +122,10 @@ public class ScenarioService : IScenarioService
             ScenarioId = scenarioId,
             ScenarioName = name,
             Description = description,
-            CallsAdjustmentPct = callsAdjPct,
-            DistributionsAdjustmentPct = distAdjPct,
-            TimingShiftMonths = timingShiftMonths,
+            CallsAdjustmentPct = a.CallsAdjustmentPct,
+            DistributionsAdjustmentPct = a.DistributionsAdjustmentPct,
+            CallsTimingShiftMonths = a.CallsTimingShiftMonths,
+            DistributionsTimingShiftMonths = a.DistributionsTimingShiftMonths,
             Periods = periods,
             BaselineNetCashflow = baseTotal,
             ScenarioNetCashflow = scenTotal,

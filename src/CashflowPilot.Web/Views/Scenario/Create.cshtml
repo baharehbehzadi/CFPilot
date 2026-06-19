@@ -48,13 +48,54 @@
                             <span asp-validation-for="DistributionsAdjustmentPct" class="text-danger small"></span>
                         </div>
                         <div class="col-md-6">
-                            <label asp-for="TimingShiftMonths" class="form-label fw-semibold">Timing Shift (months)</label>
+                            <label asp-for="CallsTimingShiftMonths" class="form-label fw-semibold">Capital Calls Timing Shift (months)</label>
                             <div class="input-group">
-                                <input asp-for="TimingShiftMonths" type="number" class="form-control" />
+                                <input asp-for="CallsTimingShiftMonths" type="number" class="form-control" />
                                 <span class="input-group-text">months</span>
                             </div>
-                            <div class="form-text">+2 = delay all cashflows by 2 months, -1 = accelerate by 1</div>
-                            <span asp-validation-for="TimingShiftMonths" class="text-danger small"></span>
+                            <div class="form-text">+2 = delay calls by 2 months, -1 = accelerate by 1</div>
+                            <span asp-validation-for="CallsTimingShiftMonths" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="DistributionsTimingShiftMonths" class="form-label fw-semibold">Distributions Timing Shift (months)</label>
+                            <div class="input-group">
+                                <input asp-for="DistributionsTimingShiftMonths" type="number" class="form-control" />
+                                <span class="input-group-text">months</span>
+                            </div>
+                            <div class="form-text">+2 = delay distributions by 2 months, -1 = accelerate by 1</div>
+                            <span asp-validation-for="DistributionsTimingShiftMonths" class="text-danger small"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card bg-light mb-4">
+                <div class="card-body">
+                    <h6 class="card-title small text-uppercase text-muted fw-bold">Scope</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label asp-for="Scope" class="form-label fw-semibold">Apply Adjustments To</label>
+                            <select asp-for="Scope" class="form-select">
+                                <option value="All">Entire Portfolio (All)</option>
+                                <option value="Fund">Specific Fund</option>
+                                <option value="Strategy">Specific Strategy</option>
+                            </select>
+                            <span asp-validation-for="Scope" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="ScopeFundId" class="form-label fw-semibold">Fund <span class="text-muted">(if scope is Fund)</span></label>
+                            <select asp-for="ScopeFundId" class="form-select"
+                                asp-items="@(new SelectList(Model.Funds, "Id", "Name"))">
+                                <option value="">-- N/A --</option>
+                            </select>
+                            <span asp-validation-for="ScopeFundId" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="ScopeStrategyId" class="form-label fw-semibold">Strategy <span class="text-muted">(if scope is Strategy)</span></label>
+                            <select asp-for="ScopeStrategyId" class="form-select"
+                                asp-items="@(new SelectList(Model.Strategies, "Id", "Name"))">
+                                <option value="">-- N/A --</option>
+                            </select>
+                            <span asp-validation-for="ScopeStrategyId" class="text-danger small"></span>
                         </div>
                     </div>
                 </div>

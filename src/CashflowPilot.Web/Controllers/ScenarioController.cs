@@ -40,28 +40,35 @@ public class ScenarioController : Controller
             .Include(s => s.ForecastRun)
             .OrderByDescending(s => s.CreatedAt)
             .ToListAsync();
-        return View(new ScenarioListViewModel { Scenarios = scenarios });
+        var descriptions = new Dictionary<int, string>();
+        foreach (var sc in scenarios)
+            descriptions[sc.Id] = await DescribeScopeAsync(sc);
+        return View(new ScenarioListViewModel { Scenarios = scenarios, ScopeDescriptions = descriptions });
     }
 
     [Authorize(Policy = "RequireAnalyst")]
     public async Task<IActionResult> Create()
     {
         var (_, orgId) = await GetUserAsync();
-        return View(new CreateScenarioViewModel
-        {
-            ForecastRuns = await _db.ForecastRuns.Where(r => r.OrganizationId == orgId && r.Status == RunStatus.Completed).Include(r => r.Portfolio).OrderByDescending(r => r.RunDate).ToListAsync()
-        });
+        return View(await BuildCreateViewModelAsync(orgId, new CreateScenarioViewModel()));
     }
 
     [HttpPost, Authorize(Policy = "RequireAnalyst"), ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(CreateScenarioViewModel model)
     {
         var (user, orgId) = await GetUserAsync();
+        if (model.Scope == "Fund" && model.ScopeFundId == null)
+            ModelState.AddModelError(nameof(model.ScopeFundId), "Select a fund when the scope is Fund.");
+        if (model.Scope == "Strategy" && model.ScopeStrategyId == null)
+            ModelState.AddModelError(nameof(model.ScopeStrategyId), "Select a strategy when the scope is Strategy.");
+        if (model.Scope == "Fund" && model.ScopeFundId != null && !await _db.Funds.AnyAsync(f => f.Id == model.ScopeFundId && f.OrganizationId == orgId))
+            ModelState.AddModelError(nameof(model.ScopeFundId), "Fund not found.");
+        if (model.Scope == "Strategy" && model.ScopeStrategyId != null && !await _db.Strategies.AnyAsync(s => s.Id == model.ScopeStrategyId && s.OrganizationId == orgId))
+            ModelState.AddModelError(nameof(model.ScopeStrategyId), "Strategy not found.");
+
         if (!ModelState.IsValid)
-        {
-            model.ForecastRuns = await _db.ForecastRuns.Where(r => r.OrganizationId == orgId && r.Status == RunStatus.Completed).Include(r => r.Portfolio).OrderByDescending(r => r.RunDate).ToListAsync();
-            return View(model);
-        }
+            return View(await BuildCreateViewModelAsync(orgId, model));
+
         var scenario = new Scenario
         {
             OrganizationId = orgId,
@@ -70,7 +77,11 @@ public class ScenarioController : Controller
             Description = model.Description,
             CallsAdjustmentPct = model.CallsAdjustmentPct,
             DistributionsAdjustmentPct = model.DistributionsAdjustmentPct,
-            TimingShiftMonths = model.TimingShiftMonths,
+            CallsTimingShiftMonths = model.CallsTimingShiftMonths,
+            DistributionsTimingShiftMonths = model.DistributionsTimingShiftMonths,
+            Scope = model.Scope,
+            ScopeFundId = model.Scope == "Fund" ? model.ScopeFundId : null,
+            ScopeStrategyId = model.Scope == "Strategy" ? model.ScopeStrategyId : null,
             CreatedAt = DateTime.UtcNow,
             CreatedByUserId = user.Id
         };
@@ -86,7 +97,7 @@ public class ScenarioController : Controller
         var scenario = await _db.Scenarios.Include(s => s.ForecastRun).FirstOrDefaultAsync(s => s.Id == id && s.OrganizationId == orgId);
         if (scenario == null) return NotFound();
         var result = await _scenario.ComputeScenarioAsync(id, orgId);
-        return View(new ScenarioDetailViewModel { Scenario = scenario, Result = result });
+        return View(new ScenarioDetailViewModel { Scenario = scenario, Result = result, ScopeDescription = await DescribeScopeAsync(scenario) });
     }
 
     [HttpPost, Authorize(Policy = "RequireAnalyst"), ValidateAntiForgeryToken]
@@ -102,4 +113,23 @@ public class ScenarioController : Controller
         }
         return RedirectToAction("Index");
     }
+
+    private async Task<CreateScenarioViewModel> BuildCreateViewModelAsync(int orgId, CreateScenarioViewModel model)
+    {
+        model.ForecastRuns = await _db.ForecastRuns.Where(r => r.OrganizationId == orgId && r.Status == RunStatus.Completed).Include(r => r.Portfolio).OrderByDescending(r => r.RunDate).ToListAsync();
+        model.Funds = await _db.Funds.Where(f => f.OrganizationId == orgId).OrderBy(f => f.Name).ToListAsync();
+        model.Strategies = await _db.Strategies.Where(s => s.OrganizationId == orgId).OrderBy(s => s.Name).ToListAsync();
+        return model;
+    }
+
+    private async Task<string> DescribeScopeAsync(Scenario scenario) => scenario.Scope switch
+    {
+        "Fund" when scenario.ScopeFundId.HasValue =>
+            $"Fund: {(await _db.Funds.FindAsync(scenario.ScopeFundId.Value))?.Name ?? "Unknown"}",
+        "Strategy" when scenario.ScopeStrategyId.HasValue =>
+            $"Strategy: {(await _db.Strategies.FindAsync(scenario.ScopeStrategyId.Value))?.Name ?? "Unknown"}",
+        "Portfolio" when scenario.ScopePortfolioId.HasValue =>
+            $"Portfolio: {(await _db.Portfolios.FindAsync(scenario.ScopePortfolioId.Value))?.Name ?? "Unknown"}",
+        _ => "All funds"
+    };
 }
