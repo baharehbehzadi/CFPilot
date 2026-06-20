@@ -53,6 +53,7 @@ builder.Services.AddScoped<ICommentaryGenerator, RuleBasedCommentaryGenerator>()
 builder.Services.AddScoped<ICommentaryService, CommentaryService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IReportExportService, ReportExportService>();
+builder.Services.AddScoped<IReportPackService, ReportPackService>();
 builder.Services.AddScoped<IVarianceComparisonService, VarianceComparisonService>();
 builder.Services.AddScoped<INavSnapshotService, NavSnapshotService>();
 

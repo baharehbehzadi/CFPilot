@@ -1,5 +1,6 @@
 using CashflowPilot.Application.Interfaces;
 using CashflowPilot.Infrastructure.Data;
+using CashflowPilot.Web.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -14,13 +15,15 @@ public class CommentaryController : Controller
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ICommentaryService _commentary;
     private readonly IAuditService _audit;
+    private readonly IReportPackService _reportPack;
 
-    public CommentaryController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, ICommentaryService commentary, IAuditService audit)
+    public CommentaryController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, ICommentaryService commentary, IAuditService audit, IReportPackService reportPack)
     {
         _db = db;
         _userManager = userManager;
         _commentary = commentary;
         _audit = audit;
+        _reportPack = reportPack;
     }
 
     private async Task<(ApplicationUser user, int orgId)> GetUserAsync()
@@ -65,7 +68,9 @@ public class CommentaryController : Controller
             .Include(c => c.VarianceAnalysis).ThenInclude(v => v.ActualRun)
             .FirstOrDefaultAsync(c => c.VarianceAnalysisId == analysisId && c.OrganizationId == orgId);
         if (pack == null) return NotFound();
+        var reportPack = await _reportPack.BuildAsync(analysisId, orgId);
+        var organization = await _db.Organizations.FindAsync(orgId);
         // Render print-friendly view with no layout
-        return View(pack);
+        return View(new ReportPackViewModel { Commentary = pack, Pack = reportPack, OrganizationName = organization?.Name ?? string.Empty });
     }
 }

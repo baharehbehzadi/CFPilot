@@ -1,12 +1,15 @@
-@model CashflowPilot.Domain.Entities.CommentaryPack
+@model CashflowPilot.Web.Models.ReportPackViewModel
 @{
     Layout = null;
-    ViewData["Title"] = "Commentary Report";
+    ViewData["Title"] = "Reporting Pack";
+    var c = Model.Commentary;
+    var p = Model.Pack;
+    var s = p.Summary;
 }
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8" /><title>CashflowPilot — Commentary Report</title>
+    <meta charset="utf-8" /><title>CashflowPilot — Reporting Pack</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11pt; color: #222; margin: 2cm; }
         h1 { color: #1a3a5c; font-size: 16pt; border-bottom: 2px solid #1a3a5c; padding-bottom: 8px; }
@@ -15,41 +18,219 @@
         .section { margin-bottom: 1.5em; }
         .section-title { font-weight: bold; color: #1a3a5c; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px; margin-bottom: 8px; }
         footer { margin-top: 2em; font-size: 8pt; color: #888; border-top: 1px solid #e0e0e0; padding-top: 8px; }
+        table.data { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 6px; }
+        table.data th, table.data td { border: 1px solid #e0e0e0; padding: 4px 6px; text-align: right; }
+        table.data th:first-child, table.data td:first-child { text-align: left; }
+        table.data th { background: #f4f6f8; color: #1a3a5c; }
+        .pos { color: #155724; }
+        .neg { color: #a61b1b; }
+        .muted { color: #888; font-style: italic; }
+        .kpi-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+        .kpi-box { flex: 1 1 150px; border: 1px solid #e0e0e0; padding: 8px 10px; border-radius: 4px; }
+        .kpi-value { font-size: 13pt; font-weight: bold; color: #1a3a5c; }
+        .kpi-label { font-size: 8pt; color: #888; text-transform: uppercase; }
+        .badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 8pt; color: #fff; }
+        .badge-error { background: #a61b1b; }
+        .badge-warning { background: #b8860b; }
+        .badge-info { background: #2d6399; }
+        .cover { page-break-after: always; padding-top: 30%; text-align: center; }
+        .cover h1 { border-bottom: none; font-size: 22pt; }
+        .cover .org { font-size: 14pt; color: #1a3a5c; margin-bottom: 1.5em; }
+        .cover .meta { text-align: center; }
         @@media print { body { margin: 1cm; } }
     </style>
 </head>
 <body>
-<h1>CashflowPilot — Commentary Report</h1>
+
+<div class="cover">
+    <h1>CashflowPilot — Reporting Pack</h1>
+    @if (!string.IsNullOrEmpty(Model.OrganizationName))
+    {
+        <div class="org">@Model.OrganizationName</div>
+    }
+    <div class="meta">
+        <strong>Analysis:</strong> @s.AnalysisName<br/>
+        <strong>Forecast vs Actual:</strong> @s.ForecastRunName vs @s.ActualRunName<br/>
+        <strong>Report Date:</strong> @DateTime.UtcNow.ToString("dd MMMM yyyy")
+    </div>
+</div>
+
+<h1>Reporting Pack</h1>
 <div class="meta">
-    <strong>Analysis:</strong> @Model.VarianceAnalysis?.ForecastRun?.Name vs @Model.VarianceAnalysis?.ActualRun?.Name<br/>
-    <strong>Generated:</strong> @Model.GeneratedAt.ToString("dd MMMM yyyy HH:mm") UTC<br/>
+    <strong>Analysis:</strong> @Model.Commentary.VarianceAnalysis?.ForecastRun?.Name vs @Model.Commentary.VarianceAnalysis?.ActualRun?.Name<br/>
+    <strong>Generated:</strong> @c.GeneratedAt.ToString("dd MMMM yyyy HH:mm") UTC<br/>
     <strong>Report Date:</strong> @DateTime.UtcNow.ToString("dd MMMM yyyy")
 </div>
 
 <div class="section">
+    <div class="section-title">KPI Summary</div>
+    <div class="kpi-grid">
+        <div class="kpi-box"><div class="kpi-value">@s.TotalForecastNetCashflow.ToString("N0")</div><div class="kpi-label">Forecast Net Cashflow</div></div>
+        <div class="kpi-box"><div class="kpi-value">@s.TotalActualNetCashflow.ToString("N0")</div><div class="kpi-label">Actual Net Cashflow</div></div>
+        <div class="kpi-box"><div class="kpi-value @(s.TotalNetCashflowVariance >= 0 ? "pos" : "neg")">@(s.TotalNetCashflowVariance >= 0 ? "+" : "")@s.TotalNetCashflowVariance.ToString("N0")</div><div class="kpi-label">Net Variance @(s.TotalNetCashflowVariancePct.HasValue ? $"({s.TotalNetCashflowVariancePct.Value:+0.#;-0.#;0}%)" : "")</div></div>
+        <div class="kpi-box"><div class="kpi-value @(s.TotalCallsVariance >= 0 ? "neg" : "pos")">@(s.TotalCallsVariance >= 0 ? "+" : "")@s.TotalCallsVariance.ToString("N0")</div><div class="kpi-label">Capital Calls Variance</div></div>
+        <div class="kpi-box"><div class="kpi-value @(s.TotalDistributionsVariance >= 0 ? "pos" : "neg")">@(s.TotalDistributionsVariance >= 0 ? "+" : "")@s.TotalDistributionsVariance.ToString("N0")</div><div class="kpi-label">Distributions Variance</div></div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">Top Drivers</div>
+    <h2>Top Funds by Net Variance</h2>
+    @if (p.TopFundDrivers.Any())
+    {
+        <table class="data">
+            <thead><tr><th>Fund</th><th>Calls Var</th><th>Dist Var</th><th>Net Var</th></tr></thead>
+            <tbody>
+            @foreach (var f in p.TopFundDrivers)
+            {
+                <tr>
+                    <td>@f.FundName</td>
+                    <td>@f.TotalCallsVariance.ToString("N0")</td>
+                    <td>@f.TotalDistributionsVariance.ToString("N0")</td>
+                    <td class="@(f.TotalNetVariance >= 0 ? "pos" : "neg")">@(f.TotalNetVariance >= 0 ? "+" : "")@f.TotalNetVariance.ToString("N0")</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <p class="muted">No fund-level variance data available.</p>
+    }
+    <h2>Top Periods by Net Variance</h2>
+    @if (p.TopPeriodDrivers.Any())
+    {
+        <table class="data">
+            <thead><tr><th>Period</th><th>Calls Var</th><th>Dist Var</th><th>Net Var</th></tr></thead>
+            <tbody>
+            @foreach (var pd in p.TopPeriodDrivers)
+            {
+                <tr>
+                    <td>@pd.Period.ToString("MMM-yyyy")</td>
+                    <td>@pd.CallsVariance.ToString("N0")</td>
+                    <td>@pd.DistributionsVariance.ToString("N0")</td>
+                    <td class="@(pd.NetVariance >= 0 ? "pos" : "neg")">@(pd.NetVariance >= 0 ? "+" : "")@pd.NetVariance.ToString("N0")</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <p class="muted">No period-level variance data available.</p>
+    }
+</div>
+
+<div class="section">
     <div class="section-title">Executive Summary</div>
-    <p>@Model.ExecutiveSummary</p>
+    <p>@c.ExecutiveSummary</p>
 </div>
 <div class="section">
     <div class="section-title">Positive Variances</div>
-    <p>@Model.PositiveVariances</p>
+    <p>@c.PositiveVariances</p>
 </div>
 <div class="section">
     <div class="section-title">Negative Variances</div>
-    <p>@Model.NegativeVariances</p>
+    <p>@c.NegativeVariances</p>
 </div>
 <div class="section">
     <div class="section-title">Delayed Distributions</div>
-    <p>@Model.DelayedDistributions</p>
+    <p>@c.DelayedDistributions</p>
 </div>
 <div class="section">
     <div class="section-title">Higher-Than-Expected Capital Calls</div>
-    <p>@Model.HigherThanExpectedCalls</p>
+    <p>@c.HigherThanExpectedCalls</p>
 </div>
 <div class="section">
     <div class="section-title">Watchpoints</div>
-    <p>@Model.Watchpoints</p>
+    <p>@c.Watchpoints</p>
 </div>
+
+<div class="section">
+    <div class="section-title">Scenario Analysis</div>
+    @if (p.Scenarios.Any())
+    {
+        <table class="data">
+            <thead><tr><th>Scenario</th><th>Calls Adj</th><th>Dist Adj</th><th>Calls Shift</th><th>Dist Shift</th><th>Net Delta</th></tr></thead>
+            <tbody>
+            @foreach (var sc in p.Scenarios)
+            {
+                <tr>
+                    <td>@sc.ScenarioName</td>
+                    <td>@(sc.CallsAdjustmentPct >= 0 ? "+" : "")@sc.CallsAdjustmentPct.ToString("F1")%</td>
+                    <td>@(sc.DistributionsAdjustmentPct >= 0 ? "+" : "")@sc.DistributionsAdjustmentPct.ToString("F1")%</td>
+                    <td>@(sc.CallsTimingShiftMonths == 0 ? "None" : $"{(sc.CallsTimingShiftMonths > 0 ? "+" : "")}{sc.CallsTimingShiftMonths}m")</td>
+                    <td>@(sc.DistributionsTimingShiftMonths == 0 ? "None" : $"{(sc.DistributionsTimingShiftMonths > 0 ? "+" : "")}{sc.DistributionsTimingShiftMonths}m")</td>
+                    <td class="@(sc.NetCashflowDelta >= 0 ? "pos" : "neg")">@(sc.NetCashflowDelta >= 0 ? "+" : "")@sc.NetCashflowDelta.ToString("N0")</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <p class="muted">No scenarios have been modeled against this forecast run.</p>
+    }
+</div>
+
+<div class="section">
+    <div class="section-title">Data Quality</div>
+    @if (p.DataQualityIssues.Any())
+    {
+        <table class="data">
+            <thead><tr><th>Severity</th><th>File</th><th>Row</th><th>Field</th><th>Message</th><th>Status</th></tr></thead>
+            <tbody>
+            @foreach (var issue in p.DataQualityIssues)
+            {
+                var badgeClass = issue.Severity switch
+                {
+                    "Error" => "badge-error",
+                    "Warning" => "badge-warning",
+                    _ => "badge-info"
+                };
+                <tr>
+                    <td><span class="badge @badgeClass">@issue.Severity</span></td>
+                    <td>@issue.FileName</td>
+                    <td>@(issue.RowNumber?.ToString() ?? "-")</td>
+                    <td>@(issue.FieldName ?? "-")</td>
+                    <td>@issue.Message</td>
+                    <td>@(issue.IsAccepted ? "Accepted" : "Pending")</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <p class="muted">No data quality issues were flagged for the source files behind this analysis.</p>
+    }
+</div>
+
+<div class="section">
+    <div class="section-title">Audit Trail</div>
+    @if (p.AuditEntries.Any())
+    {
+        <table class="data">
+            <thead><tr><th>Timestamp</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
+            <tbody>
+            @foreach (var entry in p.AuditEntries)
+            {
+                <tr>
+                    <td>@entry.Timestamp.ToString("dd MMM yyyy HH:mm")</td>
+                    <td>@entry.UserName</td>
+                    <td>@entry.Action</td>
+                    <td>@entry.Details</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <p class="muted">No audit trail entries recorded for this analysis.</p>
+    }
+</div>
+
 <footer>Generated by CashflowPilot &middot; CONFIDENTIAL &middot; For internal use only</footer>
 <script>window.onload = function(){ window.print(); }</script>
 </body>
