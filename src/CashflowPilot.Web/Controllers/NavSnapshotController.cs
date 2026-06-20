@@ -65,7 +65,8 @@ public class NavSnapshotController : Controller
             PaidInCapital = model.PaidInCapital, TotalDistributions = model.TotalDistributions, Currency = model.Currency
         }, user.Id, orgId);
 
-        await _audit.LogAsync(orgId, user.Id, user.DisplayName, "NavSnapshotCreated", "NavSnapshot", id.ToString(), $"Recorded NAV snapshot as of {model.ValuationDate:yyyy-MM-dd}");
+        await _audit.LogAsync(orgId, user.Id, user.DisplayName, "NavSnapshotCreated", "NavSnapshot", id.ToString(), $"Recorded NAV snapshot as of {model.ValuationDate:yyyy-MM-dd}",
+            newValue: new { model.PortfolioId, model.FundId, model.ValuationDate, model.NavAmount, model.UnfundedCommitment, model.PaidInCapital, model.TotalDistributions, model.Currency });
         return RedirectToAction("Index");
     }
 
@@ -73,8 +74,10 @@ public class NavSnapshotController : Controller
     public async Task<IActionResult> Delete(int id)
     {
         var (user, orgId) = await GetUserAsync();
+        var snapshot = await _navSnapshots.GetByIdAsync(id, orgId);
         await _navSnapshots.DeleteAsync(id, orgId);
-        await _audit.LogAsync(orgId, user.Id, user.DisplayName, "NavSnapshotDeleted", "NavSnapshot", id.ToString(), "Deleted NAV snapshot");
+        var oldValue = snapshot == null ? null : new { snapshot.PortfolioId, snapshot.FundId, snapshot.ValuationDate, snapshot.NavAmount, snapshot.UnfundedCommitment, snapshot.PaidInCapital, snapshot.TotalDistributions, snapshot.Currency };
+        await _audit.LogAsync(orgId, user.Id, user.DisplayName, "NavSnapshotDeleted", "NavSnapshot", id.ToString(), "Deleted NAV snapshot", oldValue: oldValue);
         return RedirectToAction("Index");
     }
 

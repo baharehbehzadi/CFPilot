@@ -119,9 +119,10 @@ public class AnalysisController : Controller
         var analysis = await _db.VarianceAnalyses.FirstOrDefaultAsync(v => v.Id == id && v.OrganizationId == orgId);
         if (analysis != null)
         {
+            var oldValue = new { analysis.Name, analysis.ForecastRunId, analysis.ActualRunId, analysis.Status };
             _db.VarianceAnalyses.Remove(analysis);
             await _db.SaveChangesAsync();
-            await _audit.LogAsync(orgId, user.Id, user.DisplayName, "Delete", "VarianceAnalysis", id.ToString(), "Deleted variance analysis");
+            await _audit.LogAsync(orgId, user.Id, user.DisplayName, "Delete", "VarianceAnalysis", id.ToString(), "Deleted variance analysis", oldValue: oldValue);
         }
         return RedirectToAction("Index");
     }

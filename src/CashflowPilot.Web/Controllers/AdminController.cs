@@ -66,7 +66,8 @@ public class AdminController : Controller
             return View(model);
         }
         await _userManager.AddToRoleAsync(user, model.Role);
-        await _audit.LogAsync(orgId, currentUser.Id, currentUser.DisplayName, "CreateUser", "ApplicationUser", user.Id, $"Created user: {model.Email} with role {model.Role}");
+        await _audit.LogAsync(orgId, currentUser.Id, currentUser.DisplayName, "CreateUser", "ApplicationUser", user.Id, $"Created user: {model.Email} with role {model.Role}",
+            newValue: new { model.Email, model.DisplayName, model.Role });
         TempData["Success"] = $"User {model.Email} created.";
         return RedirectToAction("Users");
     }
@@ -78,21 +79,44 @@ public class AdminController : Controller
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == id && u.OrganizationId == orgId);
         if (user != null && user.Id != currentUser.Id)
         {
+            var roles = await _userManager.GetRolesAsync(user);
+            var oldValue = new { user.Email, user.DisplayName, Role = roles.FirstOrDefault() };
             await _userManager.DeleteAsync(user);
-            await _audit.LogAsync(orgId, currentUser.Id, currentUser.DisplayName, "DeleteUser", "ApplicationUser", id, $"Deleted user: {user.Email}");
+            await _audit.LogAsync(orgId, currentUser.Id, currentUser.DisplayName, "DeleteUser", "ApplicationUser", id, $"Deleted user: {user.Email}", oldValue: oldValue);
         }
         return RedirectToAction("Users");
     }
 
-    public async Task<IActionResult> AuditLog(int page = 1)
+    public async Task<IActionResult> AuditLog(string? auditAction, string? entityType, string? userId, DateTime? dateFrom, DateTime? dateTo, int page = 1)
     {
         var (_, orgId) = await GetUserAsync();
         int pageSize = 50;
-        var query = _db.AuditLogs.Where(a => a.OrganizationId == orgId).OrderByDescending(a => a.Timestamp);
+        var query = _db.AuditLogs.Where(a => a.OrganizationId == orgId);
+
+        if (!string.IsNullOrWhiteSpace(auditAction))
+            query = query.Where(a => a.Action == auditAction);
+        if (!string.IsNullOrWhiteSpace(entityType))
+            query = query.Where(a => a.EntityType == entityType);
+        if (!string.IsNullOrWhiteSpace(userId))
+            query = query.Where(a => a.UserId == userId);
+        if (dateFrom.HasValue)
+            query = query.Where(a => a.Timestamp >= dateFrom.Value.Date);
+        if (dateTo.HasValue)
+            query = query.Where(a => a.Timestamp < dateTo.Value.Date.AddDays(1));
+
         ViewBag.TotalCount = await query.CountAsync();
         ViewBag.Page = page;
         ViewBag.PageSize = pageSize;
-        var logs = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        ViewBag.SelectedAction = auditAction;
+        ViewBag.SelectedEntityType = entityType;
+        ViewBag.SelectedUserId = userId;
+        ViewBag.DateFrom = dateFrom?.ToString("yyyy-MM-dd");
+        ViewBag.DateTo = dateTo?.ToString("yyyy-MM-dd");
+        ViewBag.Actions = await _db.AuditLogs.Where(a => a.OrganizationId == orgId).Select(a => a.Action).Distinct().OrderBy(a => a).ToListAsync();
+        ViewBag.EntityTypes = await _db.AuditLogs.Where(a => a.OrganizationId == orgId && a.EntityType != null).Select(a => a.EntityType).Distinct().OrderBy(a => a).ToListAsync();
+        ViewBag.Users = await _db.Users.Where(u => u.OrganizationId == orgId).OrderBy(u => u.DisplayName).Select(u => new { u.Id, u.DisplayName }).ToListAsync();
+
+        var logs = await query.OrderByDescending(a => a.Timestamp).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
         return View(logs);
     }
 }

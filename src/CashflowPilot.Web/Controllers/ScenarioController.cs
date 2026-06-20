@@ -87,7 +87,8 @@ public class ScenarioController : Controller
         };
         _db.Scenarios.Add(scenario);
         await _db.SaveChangesAsync();
-        await _audit.LogAsync(orgId, user.Id, user.DisplayName, "ScenarioCreation", "Scenario", scenario.Id.ToString(), $"Created scenario: {model.Name}");
+        await _audit.LogAsync(orgId, user.Id, user.DisplayName, "ScenarioCreation", "Scenario", scenario.Id.ToString(), $"Created scenario: {model.Name}",
+            newValue: new { scenario.Name, scenario.CallsAdjustmentPct, scenario.DistributionsAdjustmentPct, scenario.CallsTimingShiftMonths, scenario.DistributionsTimingShiftMonths, scenario.Scope });
         return RedirectToAction("Detail", new { id = scenario.Id });
     }
 
@@ -107,9 +108,10 @@ public class ScenarioController : Controller
         var scenario = await _db.Scenarios.FirstOrDefaultAsync(s => s.Id == id && s.OrganizationId == orgId);
         if (scenario != null)
         {
+            var oldValue = new { scenario.Name, scenario.CallsAdjustmentPct, scenario.DistributionsAdjustmentPct, scenario.CallsTimingShiftMonths, scenario.DistributionsTimingShiftMonths, scenario.Scope };
             _db.Scenarios.Remove(scenario);
             await _db.SaveChangesAsync();
-            await _audit.LogAsync(orgId, user.Id, user.DisplayName, "ScenarioDelete", "Scenario", id.ToString(), $"Deleted scenario: {scenario.Name}");
+            await _audit.LogAsync(orgId, user.Id, user.DisplayName, "ScenarioDelete", "Scenario", id.ToString(), $"Deleted scenario: {scenario.Name}", oldValue: oldValue);
         }
         return RedirectToAction("Index");
     }

@@ -1,3 +1,4 @@
+using CashflowPilot.Application.Interfaces;
 using CashflowPilot.Infrastructure.Data;
 using CashflowPilot.Web.Models;
 using Microsoft.AspNetCore.Authentication;
@@ -11,12 +12,14 @@ public class AccountController : Controller
 {
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IAuditService _audit;
     private readonly ILogger<AccountController> _logger;
 
-    public AccountController(SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager, ILogger<AccountController> logger)
+    public AccountController(SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager, IAuditService audit, ILogger<AccountController> logger)
     {
         _signInManager = signInManager;
         _userManager = userManager;
+        _audit = audit;
         _logger = logger;
     }
 
@@ -36,7 +39,18 @@ public class AccountController : Controller
         if (result.Succeeded)
         {
             _logger.LogInformation("User {Email} logged in.", model.Email);
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user != null)
+            {
+                await _audit.LogAsync(user.OrganizationId, user.Id, user.DisplayName, "Login", "User", user.Id, $"User logged in: {model.Email}", HttpContext.Connection.RemoteIpAddress?.ToString());
+            }
             return LocalRedirect(model.ReturnUrl ?? "/");
+        }
+
+        var failedUser = await _userManager.FindByEmailAsync(model.Email);
+        if (failedUser != null)
+        {
+            await _audit.LogAsync(failedUser.OrganizationId, failedUser.Id, failedUser.DisplayName, "LoginFailed", "User", failedUser.Id, $"Failed login attempt: {model.Email}", HttpContext.Connection.RemoteIpAddress?.ToString());
         }
 
         ModelState.AddModelError(string.Empty, "Invalid login attempt.");
@@ -46,6 +60,11 @@ public class AccountController : Controller
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
+        var user = await _userManager.GetUserAsync(User);
+        if (user != null)
+        {
+            await _audit.LogAsync(user.OrganizationId, user.Id, user.DisplayName, "Logout", "User", user.Id, $"User logged out: {user.Email}", HttpContext.Connection.RemoteIpAddress?.ToString());
+        }
         await _signInManager.SignOutAsync();
         return RedirectToAction("Login");
     }

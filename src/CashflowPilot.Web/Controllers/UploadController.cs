@@ -208,8 +208,18 @@ public class UploadController : Controller
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> AcceptValidationIssue(int id, bool accepted, string? severity, int page = 1)
     {
-        var (_, orgId) = await GetUserAsync();
+        var (user, orgId) = await GetUserAsync();
+        var issue = await _db.ValidationIssues.FirstOrDefaultAsync(v => v.Id == id && v.OrganizationId == orgId);
+        var wasAccepted = issue?.IsAccepted;
+        var message = issue?.Message;
+        var rowNumber = issue?.RowNumber;
         await _uploadService.SetIssueAcceptedAsync(id, orgId, accepted);
+        if (issue != null)
+        {
+            await _audit.LogAsync(orgId, user.Id, user.DisplayName, "ValidationIssueAccepted", "ValidationIssue", id.ToString(),
+                $"{message} (row {rowNumber})", HttpContext.Connection.RemoteIpAddress?.ToString(),
+                oldValue: new { IsAccepted = wasAccepted }, newValue: new { IsAccepted = accepted });
+        }
         return RedirectToAction("ValidationIssues", new { severity, page });
     }
 }
