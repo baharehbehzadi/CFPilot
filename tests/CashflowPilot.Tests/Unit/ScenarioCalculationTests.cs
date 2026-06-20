@@ -235,4 +235,24 @@ public class ScenarioCalculationTests
         jan.BaselineDistributions.Should().Be(2_000_000m);
         jan.ScenarioDistributions.Should().Be(1_500_000m); // 500k (Strategy 5, halved) + 1M (Strategy 9 unchanged)
     }
+
+    [Fact]
+    public async Task Preview_WrongOrganization_SeesNoEntriesFromForecastRun()
+    {
+        var (db, orgId, portfolioId, runId) = SetupForecastRun();
+        db.CashflowEntries.Add(new CashflowEntry
+        {
+            OrganizationId = orgId, ForecastRunId = runId, PortfolioId = portfolioId,
+            FundName = "Fund A", Period = new DateTime(2024, 1, 1),
+            EntryType = EntryType.Forecast, CapitalCalls = 1_000_000, Distributions = 0, Currency = "USD"
+        });
+        db.SaveChanges();
+
+        var service = new ScenarioService(db);
+        var result = await service.PreviewScenarioAsync(runId, new ScenarioAssumptionsDto { CallsAdjustmentPct = 10 }, orgId + 999);
+
+        result.Periods.Should().BeEmpty();
+        result.BaselineNetCashflow.Should().Be(0);
+        result.ScenarioNetCashflow.Should().Be(0);
+    }
 }

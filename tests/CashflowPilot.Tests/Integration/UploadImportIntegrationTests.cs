@@ -198,4 +198,71 @@ public class UploadImportIntegrationTests
         var funds = await db.Funds.Where(f => f.PortfolioId == portfolio.Id && f.Name == "Apex Fund").ToListAsync();
         funds.Should().HaveCount(1);
     }
+
+    [Fact]
+    public async Task ParseFileAsync_WrongOrganization_Throws()
+    {
+        var (db, uploadService) = SetupServices();
+        var org = new Organization { Name = "Test Org 6", CreatedAt = DateTime.UtcNow };
+        db.Organizations.Add(org);
+        db.SaveChanges();
+        var portfolio = new Portfolio { OrganizationId = org.Id, Name = "Portfolio", CreatedAt = DateTime.UtcNow };
+        db.Portfolios.Add(portfolio);
+        db.SaveChanges();
+
+        var fileId = await uploadService.SaveUploadAsync(CreateFormFile("Fund,Period,Capital Calls,Distributions\nA,2024-01,100,0\n"), FileType.ForecastCsv, portfolio.Id, "user1", org.Id);
+
+        var act = async () => await uploadService.ParseFileAsync(fileId, null, org.Id + 999);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Fact]
+    public async Task GetValidationIssuesAsync_DoesNotLeakAcrossOrganizations()
+    {
+        var (db, uploadService) = SetupServices();
+        var orgA = new Organization { Name = "Org A", CreatedAt = DateTime.UtcNow };
+        var orgB = new Organization { Name = "Org B", CreatedAt = DateTime.UtcNow };
+        db.Organizations.AddRange(orgA, orgB);
+        db.SaveChanges();
+        var portfolioA = new Portfolio { OrganizationId = orgA.Id, Name = "Portfolio A", CreatedAt = DateTime.UtcNow };
+        db.Portfolios.Add(portfolioA);
+        db.SaveChanges();
+
+        var csv = "Fund,Period,Capital Calls,Distributions\n" +
+                  "Fund A,2024-01,1000000,0\n" +        // valid
+                  "Fund B,not-a-date,500000,0\n";        // triggers a validation error
+        var fileId = await uploadService.SaveUploadAsync(CreateFormFile(csv), FileType.ForecastCsv, portfolioA.Id, "user1", orgA.Id);
+        await uploadService.ImportForecastAsync(fileId, "Run with issues", portfolioA.Id, "user1", orgA.Id);
+
+        var issuesForOrgA = await uploadService.GetValidationIssuesAsync(orgA.Id);
+        var issuesForOrgB = await uploadService.GetValidationIssuesAsync(orgB.Id);
+
+        issuesForOrgA.Should().NotBeEmpty();
+        issuesForOrgB.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SetIssueAcceptedAsync_WrongOrganization_DoesNotModifyIssue()
+    {
+        var (db, uploadService) = SetupServices();
+        var org = new Organization { Name = "Test Org 7", CreatedAt = DateTime.UtcNow };
+        db.Organizations.Add(org);
+        db.SaveChanges();
+        var portfolio = new Portfolio { OrganizationId = org.Id, Name = "Portfolio", CreatedAt = DateTime.UtcNow };
+        db.Portfolios.Add(portfolio);
+        db.SaveChanges();
+
+        var csv = "Fund,Period,Capital Calls,Distributions\n" +
+                  "Fund A,2024-01,1000000,0\n" +        // valid
+                  "Fund B,not-a-date,500000,0\n";        // triggers a validation error
+        var fileId = await uploadService.SaveUploadAsync(CreateFormFile(csv), FileType.ForecastCsv, portfolio.Id, "user1", org.Id);
+        await uploadService.ImportForecastAsync(fileId, "Run with issues", portfolio.Id, "user1", org.Id);
+        var issue = (await uploadService.GetValidationIssuesAsync(org.Id)).First();
+
+        await uploadService.SetIssueAcceptedAsync(issue.Id, org.Id + 999, true);
+
+        var unchanged = (await uploadService.GetValidationIssuesAsync(org.Id)).First(i => i.Id == issue.Id);
+        unchanged.IsAccepted.Should().BeFalse();
+    }
 }

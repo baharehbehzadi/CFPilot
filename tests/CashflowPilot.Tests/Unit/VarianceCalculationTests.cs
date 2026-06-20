@@ -176,4 +176,24 @@ public class VarianceCalculationTests
         var entry = new VarianceEntry { ForecastCapitalCalls = 0, ActualCapitalCalls = 500_000 };
         entry.CapitalCallsVariancePct.Should().BeNull();
     }
+
+    [Fact]
+    public async Task GetSummary_WrongOrganization_ReturnsNull()
+    {
+        var (db, orgId, portfolioId, forecastRunId, actualRunId) = SetupBasicRuns();
+        db.CashflowEntries.Add(new CashflowEntry
+        {
+            OrganizationId = orgId, ForecastRunId = forecastRunId, PortfolioId = portfolioId,
+            FundName = "Apex Fund", Period = new DateTime(2024, 1, 1),
+            EntryType = EntryType.Forecast, CapitalCalls = 1_000_000, Distributions = 0, Currency = "USD"
+        });
+        db.SaveChanges();
+
+        var service = new VarianceService(db);
+        var analysisId = await service.CreateAnalysisAsync(forecastRunId, actualRunId, "user1", orgId);
+
+        var summary = await service.GetSummaryAsync(analysisId, orgId + 999);
+
+        summary.Should().BeNull();
+    }
 }
