@@ -2,36 +2,67 @@
     ViewData["Title"] = "Dashboard";
 }
 
+@{
+    decimal actualCalled = ViewBag.ActualCapitalCalled;
+    decimal actualDist = ViewBag.ActualDistributions;
+    decimal actualNet = ViewBag.ActualNetCashflow;
+    decimal currentNav = ViewBag.CurrentNav;
+    decimal unfunded = ViewBag.UnfundedCommitment;
+    decimal netVarianceItd = ViewBag.NetVarianceItd;
+    int openIssues = ViewBag.OpenValidationIssueCount;
+    int latestNavCount = ViewBag.LatestNavCount;
+}
+
 <div class="row g-3 mb-4">
-    <div class="col-sm-6 col-xl">
+    <div class="col-sm-6 col-xl-3">
         <div class="stat-card">
             <div class="stat-value">@ViewBag.PortfolioCount</div>
-            <div class="stat-label"><i class="bi bi-briefcase me-1"></i>Portfolios</div>
+            <div class="stat-label"><i class="bi bi-briefcase me-1"></i>Active Portfolios</div>
         </div>
     </div>
-    <div class="col-sm-6 col-xl">
+    <div class="col-sm-6 col-xl-3">
         <div class="stat-card">
-            <div class="stat-value">@ViewBag.ForecastRunCount</div>
-            <div class="stat-label"><i class="bi bi-calendar3 me-1"></i>Forecast Runs</div>
+            <div class="stat-value">@actualCalled.ToString("N0")</div>
+            <div class="stat-label"><i class="bi bi-arrow-down-circle me-1"></i>Capital Called (ITD)</div>
         </div>
     </div>
-    <div class="col-sm-6 col-xl">
+    <div class="col-sm-6 col-xl-3">
         <div class="stat-card">
-            <div class="stat-value">@ViewBag.ActualRunCount</div>
-            <div class="stat-label"><i class="bi bi-check-circle me-1"></i>Actual Runs</div>
+            <div class="stat-value">@actualDist.ToString("N0")</div>
+            <div class="stat-label"><i class="bi bi-arrow-up-circle me-1"></i>Distributions (ITD)</div>
         </div>
     </div>
-    <div class="col-sm-6 col-xl">
+    <div class="col-sm-6 col-xl-3">
         <div class="stat-card">
-            <div class="stat-value">@ViewBag.AnalysisCount</div>
-            <div class="stat-label"><i class="bi bi-bar-chart-line me-1"></i>Analyses</div>
+            <div class="stat-value @(actualNet >= 0 ? "variance-pos" : "variance-neg")">@(actualNet >= 0 ? "+" : "")@actualNet.ToString("N0")</div>
+            <div class="stat-label"><i class="bi bi-cash-stack me-1"></i>Net Cashflow (ITD)</div>
         </div>
     </div>
-    <div class="col-sm-6 col-xl">
+    <div class="col-sm-6 col-xl-3">
         <div class="stat-card">
-            <div class="stat-value">@ViewBag.ScenarioCount</div>
-            <div class="stat-label"><i class="bi bi-sliders me-1"></i>Scenarios</div>
+            <div class="stat-value">@(latestNavCount > 0 ? currentNav.ToString("N0") : "—")</div>
+            <div class="stat-label"><i class="bi bi-graph-up me-1"></i>Current NAV</div>
         </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-value">@(latestNavCount > 0 ? unfunded.ToString("N0") : "—")</div>
+            <div class="stat-label"><i class="bi bi-hourglass-split me-1"></i>Unfunded Commitment</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-value @(netVarianceItd >= 0 ? "variance-pos" : "variance-neg")">@(netVarianceItd >= 0 ? "+" : "")@netVarianceItd.ToString("N0")</div>
+            <div class="stat-label"><i class="bi bi-bar-chart-line me-1"></i>Net Variance vs Plan (ITD)</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <a asp-controller="Upload" asp-action="ValidationIssues" class="text-decoration-none">
+            <div class="stat-card">
+                <div class="stat-value @(openIssues > 0 ? "variance-neg" : "variance-pos")">@openIssues</div>
+                <div class="stat-label"><i class="bi bi-exclamation-triangle me-1"></i>Open Validation Issues</div>
+            </div>
+        </a>
     </div>
 </div>
 

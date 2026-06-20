@@ -1,3 +1,4 @@
+using CashflowPilot.Application.DTOs;
 using CashflowPilot.Application.Interfaces;
 using CashflowPilot.Domain.Entities;
 using CashflowPilot.Domain.Enums;
@@ -177,6 +178,54 @@ public static class SeedData
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "Failed to seed demo forecast/actual runs, variance analysis, commentary, or scenario.");
+            }
+        }
+
+        // Seed demo NAV snapshots (one per fund, as of 2024-06-30) so dashboard NAV/unfunded KPIs have data
+        if (!await db.NavSnapshots.AnyAsync(n => n.OrganizationId == organization.Id))
+        {
+            try
+            {
+                var analystUser = await userManager.FindByEmailAsync("analyst@meridian.example");
+                var funds = await db.Funds.Where(f => f.OrganizationId == organization.Id).ToListAsync();
+                if (analystUser != null && funds.Count > 0)
+                {
+                    var navSnapshotService = scope.ServiceProvider.GetRequiredService<INavSnapshotService>();
+                    var valuationDate = new DateTime(2024, 6, 30);
+
+                    var navFigures = new Dictionary<string, (decimal PaidInCapital, decimal TotalDistributions, decimal NavAmount, decimal UnfundedCommitment)>
+                    {
+                        ["Apex Buyout Fund"] = (8_550_000, 2_750_000, 7_200_000, 3_450_000),
+                        ["Nordic Growth Capital"] = (5_450_000, 1_100_000, 5_000_000, 3_550_000),
+                        ["Sunrise Infrastructure"] = (3_200_000, 550_000, 3_100_000, 2_800_000),
+                        ["Meridian Direct Lending Fund"] = (4_400_000, 1_440_000, 3_200_000, 2_600_000),
+                        ["Beacon Real Estate Partners"] = (4_560_000, 60_000, 4_700_000, 3_440_000)
+                    };
+
+                    foreach (var fund in funds)
+                    {
+                        if (!navFigures.TryGetValue(fund.Name, out var figures))
+                            continue;
+
+                        await navSnapshotService.CreateAsync(new NavSnapshotCreateDto
+                        {
+                            PortfolioId = fund.PortfolioId,
+                            FundId = fund.Id,
+                            ValuationDate = valuationDate,
+                            NavAmount = figures.NavAmount,
+                            UnfundedCommitment = figures.UnfundedCommitment,
+                            PaidInCapital = figures.PaidInCapital,
+                            TotalDistributions = figures.TotalDistributions,
+                            Currency = fund.Currency
+                        }, analystUser.Id, organization.Id);
+                    }
+
+                    logger.LogInformation("Seeded demo NAV snapshots for organization {OrgName}", organization.Name);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to seed demo NAV snapshots.");
             }
         }
     }
