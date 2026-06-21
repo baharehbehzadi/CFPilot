@@ -55,3 +55,18 @@ public static class Roles
     public const string Analyst = "Analyst";
     public const string Viewer = "Viewer";
 }
+
+public enum PlanTier
+{
+    Trial,
+    Starter,
+    Professional
+}
+
+public enum SubscriptionStatus
+{
+    Trialing,
+    Active,
+    PastDue,
+    Canceled
+}

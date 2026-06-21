@@ -1,11 +1,24 @@
+@inject CashflowPilot.Infrastructure.Data.ApplicationDbContext Db
+@inject Microsoft.AspNetCore.Identity.UserManager<CashflowPilot.Infrastructure.Data.ApplicationUser> UserManager
+@{
+    CashflowPilot.Domain.Entities.Organization? currentOrg = null;
+    if (User.Identity?.IsAuthenticated == true)
+    {
+        var currentUser = await UserManager.GetUserAsync(User);
+        if (currentUser != null)
+        {
+            currentOrg = await Db.Organizations.FindAsync(currentUser.OrganizationId);
+        }
+    }
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - CashflowPilot</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+    <link href="~/lib/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet" />
     <style>
         :root { --sidebar-bg: #1a3a5c; --sidebar-hover: #234e7a; --sidebar-active: #2d6399; --accent: #2d6399; }
         html, body { height: 100%; }
@@ -74,6 +87,9 @@
                 <a asp-controller="Admin" asp-action="AuditLog" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Admin" && ViewContext.RouteData.Values["action"]?.ToString() == "AuditLog" ? "active" : "")">
                     <i class="bi bi-journal-text"></i> Audit Log
                 </a>
+                <a asp-controller="Billing" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Billing" ? "active" : "")">
+                    <i class="bi bi-credit-card"></i> Billing
+                </a>
             }
         </div>
     </nav>
@@ -88,6 +104,21 @@
             </div>
         </div>
         <div class="content-area">
+            @if (currentOrg != null && currentOrg.SubscriptionStatus == SubscriptionStatus.Trialing)
+            {
+                var daysLeft = Math.Max(0, (int)Math.Ceiling((currentOrg.TrialEndsAt - DateTime.UtcNow).TotalDays));
+                <div class="alert alert-warning d-flex justify-content-between align-items-center mb-3">
+                    <span><i class="bi bi-clock-history me-2"></i>@(daysLeft > 0 ? $"{daysLeft} day{(daysLeft == 1 ? "" : "s")} left in your trial." : "Your trial has ended.")</span>
+                    <a asp-controller="Billing" asp-action="Index" class="btn btn-sm btn-warning">Subscribe now</a>
+                </div>
+            }
+            @if (currentOrg != null && currentOrg.SubscriptionStatus == SubscriptionStatus.PastDue)
+            {
+                <div class="alert alert-danger d-flex justify-content-between align-items-center mb-3">
+                    <span><i class="bi bi-exclamation-octagon me-2"></i>Your last payment failed. Please update your billing details.</span>
+                    <a asp-controller="Billing" asp-action="Index" class="btn btn-sm btn-danger">Fix billing</a>
+                </div>
+            }
             @if (TempData["Success"] != null)
             {
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -110,8 +141,8 @@ else
 {
     @RenderBody()
 }
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="~/lib/chart.js/chart.umd.js"></script>
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

@@ -42,7 +42,15 @@ public static class SeedData
         // Seed organization
         if (!await db.Organizations.AnyAsync())
         {
-            var org = new Organization { Name = "Meridian Capital Partners", Description = "Private equity fund manager", CreatedAt = DateTime.UtcNow };
+            var org = new Organization
+            {
+                Name = "Meridian Capital Partners",
+                Description = "Private equity fund manager",
+                CreatedAt = DateTime.UtcNow,
+                PlanTier = PlanTier.Professional,
+                SubscriptionStatus = SubscriptionStatus.Active,
+                CurrentPeriodEnd = DateTime.UtcNow.AddYears(10)
+            };
             db.Organizations.Add(org);
             await db.SaveChangesAsync();
         }

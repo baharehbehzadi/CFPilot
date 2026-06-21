@@ -1,6 +1,6 @@
 # CashflowPilot
 
-A production-style private-markets cashflow reporting, variance analysis, and scenario planning web application built with ASP.NET Core 8, Entity Framework Core, and SQLite.
+A production-style private-markets cashflow reporting, variance analysis, and scenario planning web application built with ASP.NET Core 8, Entity Framework Core, and PostgreSQL — sold as a subscription-based SaaS with self-serve signup and Stripe billing.
 
 ## Overview
 
@@ -14,11 +14,13 @@ CashflowPilot helps private equity and private credit fund managers:
 - Export variance results to CSV and Excel
 - Maintain a full, filterable audit trail
 - Enforce role-based access (Admin / Analyst / Viewer), with all data scoped per organization
+- Sign up self-serve at `/Account/Register` (creates a new organization with a 14-day free trial) and subscribe to a paid plan (Starter / Professional) via Stripe Billing
 
 ## Prerequisites
 
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (included in Visual Studio 2022 v17.8+)
-- No other dependencies — uses SQLite (file-based, no server required)
+- [PostgreSQL](https://www.postgresql.org/download/) 14+ running locally or reachable over the network
+- A [Stripe](https://dashboard.stripe.com/) account (test mode is fine for development) if you want to exercise the billing flow
 
 ## Quick Start
 
@@ -31,24 +33,28 @@ cd CashflowPilot
 
 Open `CashflowPilot.sln` in Visual Studio 2022, or use the `dotnet` CLI.
 
-### 2. Configure (optional)
+### 2. Create the database
 
-Copy `appsettings.example.json` to `appsettings.Development.json` in `src/CashflowPilot.Web/` and adjust:
-
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Data Source=cashflowpilot-dev.db"
-  },
-  "Storage": {
-    "Root": "storage-dev"
-  }
-}
+```bash
+createdb cashflowpilot_dev
 ```
 
-The SQLite database file is created automatically. The storage folder is created automatically.
+### 3. Configure secrets
 
-### 3. Run
+Copy `appsettings.example.json` to `appsettings.Development.json` in `src/CashflowPilot.Web/` for non-secret defaults, then set the real connection string and Stripe keys with `dotnet user-secrets` (never commit real credentials to an appsettings file):
+
+```bash
+cd src/CashflowPilot.Web
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=cashflowpilot_dev;Username=<your-pg-user>;Password=<your-pg-password>"
+dotnet user-secrets set "Stripe:SecretKey" "sk_test_..."
+dotnet user-secrets set "Stripe:WebhookSecret" "whsec_..."
+dotnet user-secrets set "Stripe:StarterPriceId" "price_..."
+dotnet user-secrets set "Stripe:ProfessionalPriceId" "price_..."
+```
+
+The Stripe keys are only required to exercise the live checkout/billing-portal/webhook flow; the app runs fine without them, but the Subscribe/Manage Billing actions will fail until they're set. The storage folder (for uploaded CSVs) is created automatically.
+
+### 4. Run
 
 ```bash
 cd src/CashflowPilot.Web
@@ -58,11 +64,10 @@ dotnet run
 Or press **F5** in Visual Studio.
 
 The app will:
-1. Create the SQLite database (`cashflowpilot-dev.db` by default)
-2. Apply all migrations automatically
-3. Seed demo data: an organization, a multi-strategy portfolio with 5 funds, three user accounts, a pre-imported forecast and actuals run with a variance analysis and generated commentary, a sample scenario, and NAV snapshots for every fund
+1. Apply all EF Core migrations to the PostgreSQL database automatically
+2. Seed demo data: an organization, a multi-strategy portfolio with 5 funds, three user accounts, a pre-imported forecast and actuals run with a variance analysis and generated commentary, a sample scenario, and NAV snapshots for every fund
 
-### 4. Log in
+### 5. Log in
 
 | Email | Password | Role |
 |-------|----------|------|
@@ -70,7 +75,9 @@ The app will:
 | analyst@meridian.example | Analyst@123456 | Analyst |
 | viewer@meridian.example | Viewer@123456 | Viewer |
 
-### 5. Try it out
+The demo organization is seeded on the Professional plan with an active subscription, so it's never paywalled — use it for demos/sales calls. To try the self-serve signup flow instead, go to `/Account/Register` and create a new company; it starts a 14-day trial automatically.
+
+### 6. Try it out
 
 The demo organization ("Meridian Capital Partners") is pre-seeded with a forecast run, an actuals run, a variance analysis with generated commentary, a sample scenario, and NAV snapshots for all 5 funds — so the dashboard, variance analysis, and reporting pack are populated immediately after logging in. To walk through the flow from scratch:
 
@@ -104,8 +111,9 @@ CashflowPilot/
 │   │   │                               # NavSnapshotDto, VarianceComparisonDto, ReportPackDto, ...
 │   │   └── Interfaces/                 # IVarianceService, IScenarioService, ICommentaryService,
 │   │                                    # ICommentaryGenerator, INavSnapshotService,
-│   │                                    # IVarianceComparisonService, IReportPackService, IAuditService
-│   ├── CashflowPilot.Infrastructure/   # EF Core, services, file storage
+│   │                                    # IVarianceComparisonService, IReportPackService,
+│   │                                    # IAuditService, IBillingService
+│   ├── CashflowPilot.Infrastructure/   # EF Core (PostgreSQL/Npgsql), services, file storage
 │   │   ├── Data/
 │   │   │   ├── ApplicationDbContext.cs
 │   │   │   ├── SeedData.cs
@@ -114,12 +122,16 @@ CashflowPilot/
 │   │                                    # CommentaryService, RuleBasedCommentaryGenerator,
 │   │                                    # NavSnapshotService, VarianceComparisonService,
 │   │                                    # ReportPackService, ReportExportService,
-│   │                                    # FileStorageService, UploadService, AuditService
+│   │                                    # FileStorageService, UploadService, AuditService,
+│   │                                    # StripeBillingService
 │   └── CashflowPilot.Web/              # ASP.NET Core MVC
-│       ├── Controllers/                # Account, Dashboard, Upload, Analysis, Scenario,
-│       │                                # Commentary, NavSnapshot, Admin
+│       ├── Controllers/                # Account (login + self-serve registration), Dashboard,
+│       │                                # Upload, Analysis, Scenario, Commentary, NavSnapshot,
+│       │                                # Admin, Billing, StripeWebhook
+│       ├── Filters/                    # SubscriptionGateFilter
 │       ├── Models/                     # ViewModels
-│       ├── Views/                      # Razor views (Bootstrap 5, Chart.js)
+│       ├── Views/                      # Razor views (Bootstrap 5, Chart.js — vendored locally
+│       │                               # under wwwroot/lib, no CDN dependency)
 │       ├── Program.cs
 │       └── appsettings.json
 └── tests/
@@ -133,13 +145,19 @@ CashflowPilot/
 
 Uploaded CSV files are stored on the local filesystem under the path configured in `Storage:Root` (default: `storage/` relative to the web project). Sub-folders are organized as `uploads/{organizationId}/`. No cloud storage is required.
 
+## Subscriptions & Billing
+
+Every new organization created via `/Account/Register` starts on a 14-day free trial (`PlanTier.Trial`). Admins can subscribe to **Starter** or **Professional** from the **Billing** page, which redirects to a Stripe Checkout session. A `SubscriptionGateFilter` runs on every request and redirects to the Billing page once a trial expires or a subscription becomes past-due/canceled; only the Account, Billing, and StripeWebhook controllers are exempt so a locked-out org can always get to billing or sign out.
+
+Stripe webhook events are handled at `POST /webhooks/stripe` (signature-verified against `Stripe:WebhookSecret`): `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, and `invoice.payment_failed`. In production this endpoint must be publicly reachable and registered in the Stripe Dashboard (or via the Stripe CLI for local testing: `stripe listen --forward-to localhost:5000/webhooks/stripe`).
+
 ## EF Core Migrations
 
 The app automatically applies migrations on startup via `Database.MigrateAsync()`. To add a new migration after schema changes:
 
 ```bash
 cd src/CashflowPilot.Web
-dotnet ef migrations add YourMigrationName --project ../CashflowPilot.Infrastructure --startup-project .
+dotnet ef migrations add YourMigrationName --project ../CashflowPilot.Infrastructure --startup-project . --output-dir Data/Migrations
 ```
 
 ## Running Tests
@@ -155,9 +173,10 @@ Tests use xUnit, FluentAssertions, and the EF Core in-memory provider (no mockin
 - **Domain**: Pure C# entities with no framework dependencies
 - **Application**: Service interfaces and DTOs, depends only on Domain
 - **Infrastructure**: EF Core implementation, CSV parsing (CsvHelper), Excel export (ClosedXML), depends on Application + Domain
-- **Web**: ASP.NET Core MVC with Razor views, Bootstrap 5, Chart.js, depends on all layers
+- **Web**: ASP.NET Core MVC with Razor views, Bootstrap 5, Chart.js (vendored locally, no CDN dependency), depends on all layers
 - **Multi-tenancy**: All data is scoped by `OrganizationId`; users belong to exactly one organization; every service method takes and enforces an `organizationId` parameter
-- **Authentication**: ASP.NET Core Identity with cookie auth; roles: Admin, Analyst, Viewer
+- **Self-serve signup & billing**: `/Account/Register` creates a new `Organization` + admin user in a single transaction and starts a 14-day trial; `Organization` carries `PlanTier`, `SubscriptionStatus`, `TrialEndsAt`, and Stripe customer/subscription IDs. `IBillingService`/`StripeBillingService` create Stripe Checkout and Billing Portal sessions and process webhook events; `SubscriptionGateFilter` enforces access based on subscription status globally
+- **Authentication**: ASP.NET Core Identity with cookie auth; roles: Admin, Analyst, Viewer; email addresses are unique platform-wide (`RequireUniqueEmail`)
 - **Audit logging**: Significant actions (uploads, imports, parsing, validation, scenario creation, commentary generation, role changes) are logged to the `AuditLogs` table, with before/after values where applicable; viewable and filterable on the Admin Audit Log page
 - **Commentary generation**: Rule-based and deterministic (no LLM/AI), implemented behind `ICommentaryGenerator` so the rule engine can be swapped or extended without touching `CommentaryService`
 - **Variance comparison**: `IVarianceComparisonService` / `VarianceComparisonService` provide forecast-vs-actual, forecast-vs-forecast, and scenario-vs-baseline comparisons; currently exercised by tests and registered for DI, but not yet wired into a dedicated UI page (see Roadmap)
@@ -204,7 +223,9 @@ Validation issues are persisted per upload and reviewable on the **Validation Is
 - [ ] Time-series trend charts on the dashboard (variance and scenario charts already exist on their respective detail pages)
 - [ ] Bulk upload of multiple CSVs in one batch
 - [ ] API endpoints for programmatic access
-- [ ] Azure/AWS deployment guide
+- [ ] Production deployment guide (VPS provisioning, TLS, managed Postgres backups, CI/CD)
+- [ ] Per-plan feature/usage limits (e.g. cap funds or users on Starter) enforced server-side, not just shown on the pricing page
+- [ ] Automated trial-ending and payment-failed email reminders (currently only an in-app banner)
 
 ## Security Notes
 

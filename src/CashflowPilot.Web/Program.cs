@@ -1,6 +1,7 @@
 using CashflowPilot.Application.Interfaces;
 using CashflowPilot.Infrastructure.Data;
 using CashflowPilot.Infrastructure.Services;
+using CashflowPilot.Web.Filters;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -20,8 +21,8 @@ builder.Host.UseSerilog();
 
 // Database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")
-        ?? "Data Source=cashflowpilot.db"));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured.")));
 
 // Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -31,6 +32,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     options.Password.RequireUppercase = false;
     options.Password.RequireNonAlphanumeric = false;
     options.SignIn.RequireConfirmedEmail = false;
+    options.User.RequireUniqueEmail = true;
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
@@ -56,6 +58,8 @@ builder.Services.AddScoped<IReportExportService, ReportExportService>();
 builder.Services.AddScoped<IReportPackService, ReportPackService>();
 builder.Services.AddScoped<IVarianceComparisonService, VarianceComparisonService>();
 builder.Services.AddScoped<INavSnapshotService, NavSnapshotService>();
+builder.Services.AddScoped<IBillingService, StripeBillingService>();
+builder.Services.AddScoped<SubscriptionGateFilter>();
 
 // Authorization policies
 builder.Services.AddAuthorization(options =>
@@ -66,7 +70,10 @@ builder.Services.AddAuthorization(options =>
         policy.RequireRole(CashflowPilot.Domain.Enums.Roles.Admin));
 });
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.AddService<SubscriptionGateFilter>();
+});
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {

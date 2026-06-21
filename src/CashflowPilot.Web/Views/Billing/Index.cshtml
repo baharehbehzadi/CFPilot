@@ -1,0 +1,104 @@
+@model CashflowPilot.Web.Models.BillingViewModel
+@{ ViewData["Title"] = "Billing"; }
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="stat-card">
+            <div class="stat-label">Current Plan</div>
+            <div class="stat-value">@Model.PlanTier</div>
+            <div class="text-muted small mt-1">Status: @Model.SubscriptionStatus</div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="stat-card">
+            @if (Model.SubscriptionStatus == SubscriptionStatus.Trialing)
+            {
+                <div class="stat-label">Trial Ends</div>
+                <div class="stat-value">@Model.TrialEndsAt.ToString("dd MMM yyyy")</div>
+                <div class="text-muted small mt-1">@Model.TrialDaysRemaining day(s) remaining</div>
+            }
+            else if (Model.CurrentPeriodEnd.HasValue)
+            {
+                <div class="stat-label">Renews</div>
+                <div class="stat-value">@Model.CurrentPeriodEnd.Value.ToString("dd MMM yyyy")</div>
+            }
+            else
+            {
+                <div class="stat-label">Renewal</div>
+                <div class="stat-value">—</div>
+            }
+        </div>
+    </div>
+</div>
+
+@if (Model.IsTrialExpired)
+{
+    <div class="alert alert-warning">Your trial has ended. Choose a plan below to keep using CashflowPilot.</div>
+}
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">Starter</div>
+            <div class="card-body d-flex flex-column">
+                <p class="text-muted small">For a single fund manager getting started with variance analysis and scenario planning.</p>
+                <ul class="small text-muted">
+                    <li>Up to 5 funds</li>
+                    <li>Up to 5 user seats</li>
+                    <li>Variance analysis &amp; scenarios</li>
+                    <li>Reporting pack export</li>
+                </ul>
+                @if (User.IsInRole("Admin"))
+                {
+                    <form asp-controller="Billing" asp-action="Subscribe" method="post" class="mt-auto">
+                        <input type="hidden" name="plan" value="Starter" />
+                        <button type="submit" class="btn btn-outline-primary w-100" @(Model.PlanTier == PlanTier.Starter && Model.SubscriptionStatus == SubscriptionStatus.Active ? "disabled" : "")>
+                            @(Model.PlanTier == PlanTier.Starter && Model.SubscriptionStatus == SubscriptionStatus.Active ? "Current Plan" : "Subscribe to Starter")
+                        </button>
+                    </form>
+                }
+                else if (Model.PlanTier == PlanTier.Starter && Model.SubscriptionStatus == SubscriptionStatus.Active)
+                {
+                    <span class="badge bg-success mt-auto">Current Plan</span>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">Professional</div>
+            <div class="card-body d-flex flex-column">
+                <p class="text-muted small">For multi-fund managers who need unlimited funds, users, and the full reporting suite.</p>
+                <ul class="small text-muted">
+                    <li>Unlimited funds</li>
+                    <li>Unlimited user seats</li>
+                    <li>Variance analysis &amp; scenarios</li>
+                    <li>Reporting pack export</li>
+                    <li>Priority support</li>
+                </ul>
+                @if (User.IsInRole("Admin"))
+                {
+                    <form asp-controller="Billing" asp-action="Subscribe" method="post" class="mt-auto">
+                        <input type="hidden" name="plan" value="Professional" />
+                        <button type="submit" class="btn btn-primary w-100" @(Model.PlanTier == PlanTier.Professional && Model.SubscriptionStatus == SubscriptionStatus.Active ? "disabled" : "")>
+                            @(Model.PlanTier == PlanTier.Professional && Model.SubscriptionStatus == SubscriptionStatus.Active ? "Current Plan" : "Subscribe to Professional")
+                        </button>
+                    </form>
+                }
+                else if (Model.PlanTier == PlanTier.Professional && Model.SubscriptionStatus == SubscriptionStatus.Active)
+                {
+                    <span class="badge bg-success mt-auto">Current Plan</span>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.HasStripeCustomer && User.IsInRole("Admin"))
+{
+    <div class="mt-4">
+        <a asp-controller="Billing" asp-action="ManagePortal" class="btn btn-outline-secondary">
+            <i class="bi bi-credit-card me-1"></i>Manage Billing Details
+        </a>
+    </div>
+}
