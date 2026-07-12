@@ -146,8 +146,10 @@
   @media print{
     header.site,nav.tabs,.hero,.no-print,.foot{display:none!important}
     body{background:#fff}
-    section.panel{display:none!important}
-    #print-target{display:block!important;padding:0}
+    section.panel:not(.active){display:none!important}
+    section.panel.active{padding:0}
+    .grid.side{display:block!important}
+    #print-target{padding:0}
     .quote-doc{box-shadow:none;border:0}
   }
 </style>
@@ -193,6 +195,21 @@
           <div class="step"><div class="num"></div><div><h4>Package it up</h4><p>Bundle services into Good/Better/Best tiers priced for healthy margins.</p></div></div>
           <div class="step"><div class="num"></div><div><h4>Send a pro quote</h4><p>Generate a branded quote you can print or save as PDF and send today.</p></div></div>
           <div class="step"><div class="num"></div><div><h4>Track the goal</h4><p>See how many clients you need this month and log every win.</p></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <div class="grid two" style="align-items:center">
+        <div>
+          <h2>Free: the 5-minute pricing cheat-sheet</h2>
+          <p class="sub" style="margin:0">Get the quick-start guide to raising your rates without losing clients — plus first access to new tools. This is your lead magnet: every email is a warm buyer for your paid offer.</p>
+        </div>
+        <div>
+          <label class="field">Your email
+            <input class="inp" id="lead_home" type="email" placeholder="you@business.com" onkeydown="if(event.key==='Enter')captureLead('lead_home','lead_home_msg')">
+          </label>
+          <button class="btn" onclick="captureLead('lead_home','lead_home_msg')">Send me the cheat-sheet →</button>
+          <div id="lead_home_msg" style="font-size:13px;margin-top:8px;font-weight:600"></div>
         </div>
       </div>
     </div>
@@ -323,7 +340,7 @@
         <label class="field">Terms / notes
           <textarea id="q_terms" rows="3" oninput="renderQuote()">50% deposit to reserve your date. Balance due on delivery. Thank you!</textarea>
         </label>
-        <button class="btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+        <button class="btn" onclick="printQuote()">🖨️ Print / Save quote as PDF</button>
       </div>
       <div id="print-target">
         <div class="quote-doc" id="q_doc"></div>
@@ -417,6 +434,20 @@
         <a class="btn gold" id="l_cta" href="#" target="_blank" rel="noopener" style="margin-top:6px">Get the Pricing Toolkit — $37</a>
         <p class="note">Tip: keep the first version simple. Ship it, get 5 sales, then add a template pack or a short "how to price" video as a premium bundle.</p>
       </div>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <h2 style="font-size:18px">Your captured leads</h2>
+      <p class="sub">Emails from the free cheat-sheet form are saved here on your device. Paste a form endpoint (Formspree, Getform, ConvertKit) to also receive them by email automatically. Export anytime as CSV to import into your email tool.</p>
+      <label class="field">Email form endpoint (optional)
+        <input class="inp" id="cap_ep" placeholder="https://formspree.io/f/xxxxxx" oninput="saveCapture()">
+        <span class="hint">Leave blank to just collect locally and export as CSV.</span>
+      </label>
+      <div class="toolbar">
+        <button class="btn small ghost" onclick="exportLeads()">⬇ Export leads (CSV)</button>
+        <span style="color:var(--muted);font-size:13px">Total leads: <b id="lead_count">0</b></span>
+      </div>
+      <table id="lead_table" style="margin-top:10px"><thead><tr><th>Email</th><th>Captured</th><th></th></tr></thead><tbody></tbody></table>
+      <p class="note" id="lead_empty">No leads yet. Share your page and they'll appear here.</p>
     </div>
   </section>
 
@@ -602,6 +633,42 @@ function renderWins(){
 }
 ['g_goal','g_avg'].forEach(k=>$(k).addEventListener('input',calcGoal));
 
+/* ---- Quote print ---- */
+function printQuote(){ go('quote'); window.print(); }
+
+/* ---- Lead capture ---- */
+let leads=store.get('leads',[]);
+function captureLead(inputId,msgId){
+  const el=$(inputId); const email=(el.value||'').trim(); const msg=$(msgId);
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){msg.textContent='Please enter a valid email address.';msg.style.color='var(--bad)';return;}
+  leads.push({email,at:new Date().toISOString()});
+  store.set('leads',leads); el.value='';
+  msg.textContent="✓ You're on the list! Check your inbox for the cheat-sheet.";msg.style.color='var(--good)';
+  renderLeads();
+  const cap=store.get('capture',{}); const ep=cap&&cap.endpoint;
+  if(ep){try{fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,source:'RateRise cheat-sheet'})}).catch(()=>{});}catch(e){}}
+  flashSaved();
+}
+function delLead(i){leads.splice(i,1);store.set('leads',leads);renderLeads()}
+function renderLeads(){
+  const tb=$('lead_table').querySelector('tbody');tb.innerHTML='';
+  leads.forEach((l,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${esc(l.email)}</td><td>${new Date(l.at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td><td class="num"><button class="del" onclick="delLead(${i})">✕</button></td>`;
+    tb.appendChild(tr);
+  });
+  $('lead_count').textContent=leads.length;
+  $('lead_empty').style.display=leads.length?'none':'block';
+}
+function exportLeads(){
+  if(!leads.length)return;
+  const rows=[['email','captured_at'],...leads.map(l=>[l.email,l.at])];
+  const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='raterise-leads.csv';document.body.appendChild(a);a.click();a.remove();
+}
+function saveCapture(){store.set('capture',{endpoint:$('cap_ep').value.trim()});flashSaved()}
+
 /* ---- Launch link ---- */
 function saveLink(){
   const link=$('l_link').value.trim();const price=$('l_price').value.trim()||'$37';
@@ -629,6 +696,9 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;',
   // launch
   const ld=store.get('launch',null);if(ld){$('l_link').value=ld.link||'';$('l_price').value=ld.price||'$37'}
   saveLink();
+  // leads
+  const cap=store.get('capture',null);if(cap&&cap.endpoint)$('cap_ep').value=cap.endpoint;
+  renderLeads();
 })();
 </script>
 </body>

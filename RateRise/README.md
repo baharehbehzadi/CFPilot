@@ -26,8 +26,18 @@ underprice themselves.
    tax, deposit, terms) that can be saved as a PDF straight from the browser's print dialog.
 4. **Goal Tracker** — converts a monthly revenue goal into a concrete "clients needed" number and
    tracks logged wins against it with a progress bar.
-5. **Launch & Earn** — a built-in monetization playbook plus an editable checkout button the buyer
-   can point at their own Gumroad/Payhip/Stripe link.
+5. **Launch & Earn** — a built-in monetization playbook, an editable checkout button the buyer
+   can point at their own Gumroad/Payhip/Stripe link, plus an **email lead-capture form** (free
+   "pricing cheat-sheet") with a lead manager: view captured emails, export them to CSV, and
+   optionally forward them to a form endpoint (Formspree/Getform/ConvertKit) so you receive them
+   automatically.
+
+## Supporting documents
+
+- **`LISTING.md`** — ready-to-paste sales/listing copy (titles, descriptions, benefit bullets,
+  FAQ, tags, and price points) for Gumroad, Payhip, or Etsy.
+- **`SELLING-ROADMAP.md`** — a phased go-to-market plan: how to set it up, get your first 5 sales,
+  build steady sales, scale, plus a marketing content bank and realistic revenue math.
 
 ## How it makes money
 
