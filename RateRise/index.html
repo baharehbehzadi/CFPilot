@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RateRise — Pricing Studio for Service Entrepreneurs</title>
+<meta name="description" content="Stop undercharging. RateRise reverse-engineers the rate you should charge, builds tiered packages, and generates client-ready quotes — built for service-based entrepreneurs." />
+<style>
+  :root{
+    --bg:#fbf7f5; --surface:#ffffff; --surface-2:#f6eeeb; --ink:#2b2230; --muted:#7a6f77;
+    --line:#ece0dc; --brand:#b13a6f; --brand-2:#d9689a; --brand-soft:#fbe9f1;
+    --gold:#c99a3a; --good:#1f9d6b; --bad:#c0473a; --shadow:0 12px 40px -18px rgba(80,30,55,.35);
+    --radius:16px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#171216; --surface:#221a20; --surface-2:#2b2028; --ink:#f4ecf0; --muted:#b39fac;
+      --line:#3a2c35; --brand:#e57aa8; --brand-2:#f0a1c4; --brand-soft:#33202b;
+      --gold:#e0b95f; --shadow:0 16px 46px -20px rgba(0,0,0,.6);
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--brand)}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+  header.site{
+    position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 88%, transparent);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line);
+  }
+  .bar{display:flex;align-items:center;gap:14px;height:64px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.02em;font-size:19px}
+  .logo .mark{
+    width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font-weight:900;
+    background:linear-gradient(135deg,var(--brand),var(--brand-2));box-shadow:var(--shadow)
+  }
+  nav.tabs{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
+  nav.tabs button{
+    border:0;background:transparent;color:var(--muted);font-weight:600;font-size:14px;
+    padding:8px 12px;border-radius:10px;cursor:pointer;font-family:inherit
+  }
+  nav.tabs button:hover{color:var(--ink);background:var(--surface-2)}
+  nav.tabs button.active{color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2))}
+
+  .hero{padding:54px 0 26px}
+  .hero .eyebrow{color:var(--brand);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:12.5px}
+  .hero h1{font-size:clamp(30px,5vw,46px);line-height:1.08;letter-spacing:-.03em;margin:.35em 0 .3em;max-width:16ch}
+  .hero p.lead{font-size:18px;color:var(--muted);max-width:60ch;margin:0 0 22px}
+  .cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;font-family:inherit;font-weight:700;
+    font-size:15px;padding:13px 20px;border-radius:12px;text-decoration:none;
+    background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;box-shadow:var(--shadow)
+  }
+  .btn.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:none}
+  .btn.small{padding:9px 14px;font-size:14px}
+  .btn.gold{background:linear-gradient(135deg,var(--gold),#e6c169);color:#3a2a08}
+
+  section.panel{display:none;padding:22px 0 70px;animation:fade .25s ease}
+  section.panel.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .grid{display:grid;gap:18px}
+  @media(min-width:820px){.grid.two{grid-template-columns:1fr 1fr}.grid.side{grid-template-columns:1.1fr .9fr}}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow)}
+  .card h2{margin:0 0 4px;font-size:20px;letter-spacing:-.02em}
+  .card .sub{color:var(--muted);font-size:14px;margin:0 0 16px}
+  label.field{display:block;margin:0 0 13px;font-size:13.5px;font-weight:600;color:var(--ink)}
+  label.field .hint{display:block;font-weight:400;color:var(--muted);font-size:12.5px;margin-top:2px}
+  .inp,select,textarea{
+    width:100%;margin-top:6px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;
+    background:var(--bg);color:var(--ink);font-size:15px;font-family:inherit
+  }
+  .inp:focus,select:focus,textarea:focus{outline:2px solid var(--brand-2);outline-offset:1px;border-color:transparent}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .prefix{position:relative}
+  .prefix span{position:absolute;left:11px;top:50%;transform:translateY(-30%);color:var(--muted);font-size:15px}
+  .prefix .inp{padding-left:24px}
+
+  .result{background:linear-gradient(135deg,var(--brand-soft),transparent);border:1px solid var(--line);border-radius:14px;padding:20px;margin-top:4px}
+  .big{font-size:clamp(34px,7vw,52px);font-weight:900;letter-spacing:-.03em;line-height:1;color:var(--brand)}
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 14px}
+  .kpi .n{font-size:22px;font-weight:800;letter-spacing:-.02em}
+  .kpi .l{font-size:12.5px;color:var(--muted)}
+  .note{font-size:13.5px;color:var(--muted);margin-top:14px}
+  .flag{border-radius:10px;padding:12px 14px;font-size:14px;margin-top:14px;font-weight:600}
+  .flag.warn{background:#fdeee9;color:#9a4327;border:1px solid #f4cdbf}
+  .flag.good{background:#e7f6ee;color:#12694a;border:1px solid #bfe6d1}
+  @media (prefers-color-scheme: dark){
+    .flag.warn{background:#3a241c;color:#f0a986;border-color:#5a3527}
+    .flag.good{background:#173026;color:#7fd8ac;border-color:#265741}
+  }
+
+  table{width:100%;border-collapse:collapse;font-size:14px;margin-top:6px}
+  th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.04em}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  .del{border:0;background:transparent;color:var(--bad);cursor:pointer;font-size:16px;line-height:1}
+  .tierpick{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 2px}
+  .chip{padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)}
+  .chip.on{background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;border-color:transparent}
+
+  .tiers{display:grid;gap:14px;margin-top:16px}
+  @media(min-width:720px){.tiers{grid-template-columns:repeat(3,1fr)}}
+  .tier{border:1px solid var(--line);border-radius:14px;padding:18px;background:var(--surface);position:relative}
+  .tier.featured{border-color:var(--brand);box-shadow:0 0 0 2px var(--brand-soft)}
+  .tier .badge{position:absolute;top:-11px;left:18px;background:var(--brand);color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:.04em}
+  .tier h3{margin:2px 0 2px;font-size:16px}
+  .tier .price{font-size:30px;font-weight:900;letter-spacing:-.02em;margin:6px 0}
+  .tier ul{margin:8px 0 0;padding-left:18px;font-size:13.5px;color:var(--muted)}
+  .tier .profit{font-size:12.5px;color:var(--good);font-weight:700;margin-top:10px}
+
+  /* Quote */
+  .quote-doc{background:#fff;color:#241b28;border-radius:14px;border:1px solid var(--line);padding:32px;box-shadow:var(--shadow)}
+  .quote-doc .qhead{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:2px solid #efe4e9;padding-bottom:16px}
+  .quote-doc .biz{display:flex;gap:12px;align-items:center}
+  .quote-doc .biz .mark{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:18px;background:linear-gradient(135deg,#b13a6f,#d9689a)}
+  .quote-doc .biz .bn{font-weight:800;font-size:18px}
+  .quote-doc .biz .bt{color:#8a7d84;font-size:13px}
+  .quote-doc .meta{text-align:right;font-size:13px;color:#6a5f66}
+  .quote-doc h2.qt{font-size:22px;margin:18px 0 2px;color:#b13a6f;letter-spacing:-.02em}
+  .quote-doc table{color:#241b28}
+  .quote-doc th,.quote-doc td{border-color:#efe4e9}
+  .quote-doc .totals{margin-top:12px;margin-left:auto;width:min(320px,100%)}
+  .quote-doc .totals .r{display:flex;justify-content:space-between;padding:6px 0}
+  .quote-doc .totals .r.grand{border-top:2px solid #efe4e9;margin-top:6px;padding-top:12px;font-size:20px;font-weight:900;color:#b13a6f}
+  .quote-doc .terms{margin-top:20px;font-size:13px;color:#6a5f66;white-space:pre-wrap}
+
+  .steps{counter-reset:s;display:grid;gap:14px}
+  .step{display:flex;gap:14px;align-items:flex-start}
+  .step .num{counter-increment:s;flex:none;width:30px;height:30px;border-radius:9px;background:var(--brand-soft);color:var(--brand);font-weight:800;display:grid;place-items:center}
+  .step .num::before{content:counter(s)}
+  .step h4{margin:2px 0 3px;font-size:15.5px}
+  .step p{margin:0;color:var(--muted);font-size:14px}
+
+  .pricecards{display:grid;gap:16px;margin-top:8px}
+  @media(min-width:720px){.pricecards{grid-template-columns:1fr 1fr}}
+  .foot{color:var(--muted);font-size:13px;text-align:center;padding:30px 0;border-top:1px solid var(--line)}
+  .saved{font-size:12.5px;color:var(--good);font-weight:600;opacity:0;transition:opacity .3s}
+  .saved.show{opacity:1}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
+  @media print{
+    header.site,nav.tabs,.hero,.no-print,.foot{display:none!important}
+    body{background:#fff}
+    section.panel{display:none!important}
+    #print-target{display:block!important;padding:0}
+    .quote-doc{box-shadow:none;border:0}
+  }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="wrap bar">
+    <div class="logo"><span class="mark">R</span> RateRise</div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="home" class="active">Home</button>
+      <button data-tab="rate">Rate Calculator</button>
+      <button data-tab="packages">Package Builder</button>
+      <button data-tab="quote">Quote Generator</button>
+      <button data-tab="goal">Goal Tracker</button>
+      <button data-tab="launch">Launch &amp; Earn</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- HOME -->
+  <section class="panel active" id="tab-home">
+    <div class="hero">
+      <div class="eyebrow">Pricing studio for service entrepreneurs</div>
+      <h1>Stop undercharging. Know exactly what you're worth.</h1>
+      <p class="lead">RateRise reverse-engineers the rate you need to hit your income goals, builds irresistible tiered packages, and turns them into client-ready quotes in minutes — no spreadsheets, no guessing, no working for free.</p>
+      <div class="cta-row">
+        <button class="btn" onclick="go('rate')">Calculate my rate →</button>
+        <button class="btn ghost" onclick="go('launch')">How this makes money</button>
+      </div>
+    </div>
+    <div class="grid two">
+      <div class="card">
+        <h2>Built for the businesses that undercharge most</h2>
+        <p class="sub">Coaches · virtual assistants · photographers · designers · beauty &amp; wellness pros · wedding &amp; event vendors · Etsy &amp; handmade shops · consultants</p>
+        <p style="color:var(--muted);font-size:14.5px;margin:0">Most service founders pick a price by copying a competitor or guessing what "feels okay." RateRise works backwards from the life you actually want — your income goal, real expenses, taxes, and the hours you can realistically bill — and hands you a number you can charge with confidence.</p>
+      </div>
+      <div class="card">
+        <h2>Four tools, one workflow</h2>
+        <div class="steps" style="margin-top:10px">
+          <div class="step"><div class="num"></div><div><h4>Find your true rate</h4><p>Turn your income goal into an hourly &amp; day rate that covers taxes, expenses, and time off.</p></div></div>
+          <div class="step"><div class="num"></div><div><h4>Package it up</h4><p>Bundle services into Good/Better/Best tiers priced for healthy margins.</p></div></div>
+          <div class="step"><div class="num"></div><div><h4>Send a pro quote</h4><p>Generate a branded quote you can print or save as PDF and send today.</p></div></div>
+          <div class="step"><div class="num"></div><div><h4>Track the goal</h4><p>See how many clients you need this month and log every win.</p></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RATE CALCULATOR -->
+  <section class="panel" id="tab-rate">
+    <div class="grid side">
+      <div class="card">
+        <h2>Rate Calculator</h2>
+        <p class="sub">Work backwards from the income you actually want to take home.</p>
+        <label class="field">Desired annual take-home income
+          <div class="prefix"><span>$</span><input class="inp" id="r_income" type="number" min="0" step="1000" value="60000"></div>
+          <span class="hint">What you want to pay yourself per year, after business costs.</span>
+        </label>
+        <div class="row2">
+          <label class="field">Annual business expenses
+            <div class="prefix"><span>$</span><input class="inp" id="r_expenses" type="number" min="0" step="500" value="9000"></div>
+            <span class="hint">Software, ads, tools, fees.</span>
+          </label>
+          <label class="field">Tax set-aside
+            <div class="prefix"><input class="inp" id="r_tax" type="number" min="0" max="70" step="1" value="25" style="padding-left:12px"><span style="left:auto;right:11px">%</span></div>
+            <span class="hint">Self-employment + income tax.</span>
+          </label>
+        </div>
+        <div class="row2">
+          <label class="field">Weeks you work per year
+            <input class="inp" id="r_weeks" type="number" min="1" max="52" step="1" value="46">
+            <span class="hint">52 minus holidays &amp; time off.</span>
+          </label>
+          <label class="field">Billable hours per week
+            <input class="inp" id="r_hours" type="number" min="1" max="80" step="1" value="22">
+            <span class="hint">Hours a client actually pays for.</span>
+          </label>
+        </div>
+        <label class="field">Your current rate (optional)
+          <div class="prefix"><span>$</span><input class="inp" id="r_current" type="number" min="0" step="5" value="45"></div>
+          <span class="hint">To see how much you may be leaving on the table.</span>
+        </label>
+      </div>
+      <div>
+        <div class="result">
+          <div style="color:var(--muted);font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:uppercase">Your minimum hourly rate</div>
+          <div class="big" id="r_hourly">$0</div>
+          <div class="kpis">
+            <div class="kpi"><div class="n" id="r_day">$0</div><div class="l">Recommended day rate</div></div>
+            <div class="kpi"><div class="n" id="r_project">$0</div><div class="l">Half-day / min. project</div></div>
+            <div class="kpi"><div class="n" id="r_revenue">$0</div><div class="l">Revenue you must bill/yr</div></div>
+            <div class="kpi"><div class="n" id="r_billhours">0</div><div class="l">Billable hours/yr</div></div>
+          </div>
+          <div id="r_flag"></div>
+          <p class="note">This rate covers your take-home pay, expenses, and taxes across only the hours you can realistically bill. Rounding up is always fair — this is the floor, not the ceiling.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PACKAGE BUILDER -->
+  <section class="panel" id="tab-packages">
+    <div class="grid side">
+      <div class="card">
+        <h2>Package Builder</h2>
+        <p class="sub">Clients buy outcomes, not hours. Bundle your services into tiers.</p>
+        <label class="field">Add a service / deliverable
+          <input class="inp" id="p_name" placeholder="e.g. Brand photo session" onkeydown="if(event.key==='Enter')addService()">
+        </label>
+        <div class="row2">
+          <label class="field">Your cost to deliver
+            <div class="prefix"><span>$</span><input class="inp" id="p_cost" type="number" min="0" step="10" placeholder="0"></div>
+            <span class="hint">Time (use your rate) + materials.</span>
+          </label>
+          <label class="field">Tier
+            <select id="p_tier">
+              <option value="0">Essentials</option>
+              <option value="1" selected>Signature</option>
+              <option value="2">Premium</option>
+            </select>
+          </label>
+        </div>
+        <button class="btn small" onclick="addService()">+ Add to package</button>
+        <label class="field" style="margin-top:18px">Target profit margin
+          <div class="prefix"><input class="inp" id="p_margin" type="number" min="0" max="90" step="5" value="55" style="padding-left:12px"><span style="left:auto;right:11px">%</span></div>
+          <span class="hint">Healthy service margins run 50–70%.</span>
+        </label>
+        <table id="p_table"><thead><tr><th>Service</th><th>Tier</th><th class="num">Cost</th><th></th></tr></thead><tbody></tbody></table>
+        <p class="note" id="p_empty">No services yet — add a few above to build your tiers.</p>
+      </div>
+      <div>
+        <div class="card">
+          <h2 style="font-size:17px">Your pricing tiers</h2>
+          <p class="sub">Priced automatically from your costs + target margin.</p>
+          <div class="tiers" id="p_tiers"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUOTE GENERATOR -->
+  <section class="panel" id="tab-quote">
+    <div class="grid side">
+      <div class="card no-print">
+        <h2>Quote Generator</h2>
+        <p class="sub">Fill this in, then print or save as PDF to send your client.</p>
+        <div class="row2">
+          <label class="field">Your business name<input class="inp" id="q_biz" placeholder="Bloom Studio" oninput="renderQuote()"></label>
+          <label class="field">Tagline / service<input class="inp" id="q_tag" placeholder="Brand Photography" oninput="renderQuote()"></label>
+        </div>
+        <div class="row2">
+          <label class="field">Client name<input class="inp" id="q_client" placeholder="Client / Company" oninput="renderQuote()"></label>
+          <label class="field">Quote valid until<input class="inp" id="q_valid" type="date" oninput="renderQuote()"></label>
+        </div>
+        <label class="field">Line items</label>
+        <table id="q_table"><thead><tr><th>Description</th><th class="num">Qty</th><th class="num">Price</th><th></th></tr></thead><tbody></tbody></table>
+        <div class="toolbar">
+          <input class="inp" id="q_desc" placeholder="Description" style="flex:2;min-width:150px;margin:0">
+          <input class="inp" id="q_qty" type="number" placeholder="Qty" value="1" min="0" style="width:70px;margin:0">
+          <input class="inp" id="q_price" type="number" placeholder="Price" min="0" style="width:100px;margin:0">
+          <button class="btn small" onclick="addQuoteItem()">+ Add</button>
+        </div>
+        <div class="row2" style="margin-top:16px">
+          <label class="field">Tax rate
+            <div class="prefix"><input class="inp" id="q_taxr" type="number" min="0" step="0.5" value="0" style="padding-left:12px" oninput="renderQuote()"><span style="left:auto;right:11px">%</span></div>
+          </label>
+          <label class="field">Deposit required
+            <div class="prefix"><input class="inp" id="q_deposit" type="number" min="0" max="100" step="5" value="50" style="padding-left:12px" oninput="renderQuote()"><span style="left:auto;right:11px">%</span></div>
+          </label>
+        </div>
+        <label class="field">Terms / notes
+          <textarea id="q_terms" rows="3" oninput="renderQuote()">50% deposit to reserve your date. Balance due on delivery. Thank you!</textarea>
+        </label>
+        <button class="btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+      </div>
+      <div id="print-target">
+        <div class="quote-doc" id="q_doc"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GOAL TRACKER -->
+  <section class="panel" id="tab-goal">
+    <div class="grid side">
+      <div class="card">
+        <h2>Monthly Goal Tracker</h2>
+        <p class="sub">Turn a revenue goal into a concrete client target.</p>
+        <div class="row2">
+          <label class="field">Monthly revenue goal
+            <div class="prefix"><span>$</span><input class="inp" id="g_goal" type="number" min="0" step="500" value="8000"></div>
+          </label>
+          <label class="field">Average sale / project value
+            <div class="prefix"><span>$</span><input class="inp" id="g_avg" type="number" min="1" step="50" value="1200"></div>
+          </label>
+        </div>
+        <div class="result" style="margin-top:6px">
+          <div style="color:var(--muted);font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:uppercase">Clients needed this month</div>
+          <div class="big" id="g_needed">0</div>
+          <p class="note" id="g_pace">Roughly <b id="g_week">0</b> new clients per week to stay on pace.</p>
+        </div>
+        <label class="field" style="margin-top:16px">Log a win
+          <div class="toolbar" style="margin-top:6px">
+            <input class="inp" id="g_wname" placeholder="Client / sale" style="flex:2;min-width:140px;margin:0">
+            <input class="inp" id="g_wval" type="number" placeholder="$ Amount" style="width:120px;margin:0" onkeydown="if(event.key==='Enter')addWin()">
+            <button class="btn small" onclick="addWin()">+ Log</button>
+          </div>
+        </label>
+      </div>
+      <div class="card">
+        <h2 style="font-size:17px">This month's progress</h2>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin:8px 0 6px">
+          <span class="big" id="g_booked" style="font-size:34px">$0</span>
+          <span style="color:var(--muted);font-size:14px">of <b id="g_goal2">$0</b></span>
+        </div>
+        <div style="height:14px;border-radius:999px;background:var(--surface-2);overflow:hidden">
+          <div id="g_bar" style="height:100%;width:0;background:linear-gradient(90deg,var(--brand),var(--brand-2));transition:width .4s"></div>
+        </div>
+        <div id="g_pct" style="font-size:13px;color:var(--muted);margin-top:6px">0% of goal</div>
+        <table id="g_table" style="margin-top:14px"><thead><tr><th>Win</th><th class="num">Amount</th><th></th></tr></thead><tbody></tbody></table>
+        <p class="note" id="g_empty">No wins logged yet. Every booking counts — log your first one!</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- LAUNCH -->
+  <section class="panel" id="tab-launch">
+    <div class="card" style="margin-bottom:18px">
+      <div class="eyebrow" style="color:var(--brand);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:12.5px">The business behind the tool</div>
+      <h2 style="font-size:24px;margin-top:6px">How RateRise earns you money</h2>
+      <p style="color:var(--muted);max-width:65ch">RateRise isn't just a tool for your own pricing — it's a product you can sell. Everything here runs 100% in the browser with no server and no monthly bills, so every dollar of revenue is profit. Two proven models:</p>
+      <div class="pricecards">
+        <div class="tier featured"><span class="badge">Easiest to launch</span>
+          <h3>Sell it as a digital product</h3>
+          <div class="price">$27–$49</div>
+          <p style="color:var(--muted);font-size:14px;margin:2px 0 0">One-time price on Gumroad, Payhip, or Etsy. Rename it, add your branding, and sell "The Pricing Toolkit for Service Pros." Buyers download the single HTML file and use it forever.</p>
+          <ul><li>Zero delivery cost or hosting</li><li>Sells while you sleep</li><li>Bundle with a mini-course or template pack</li></ul>
+        </div>
+        <div class="tier"><h3>Run it as a lead magnet + upsell</h3>
+          <div class="price">Free → $$$</div>
+          <p style="color:var(--muted);font-size:14px;margin:2px 0 0">Host it free, collect emails, and upsell your 1:1 coaching, a pricing audit, or a done-for-you package. The calculator proves the client is underpricing — then you sell the fix.</p>
+          <ul><li>Builds an email list of buyers</li><li>Warms leads for high-ticket offers</li><li>Positions you as the pricing expert</li></ul>
+        </div>
+      </div>
+    </div>
+    <div class="grid two">
+      <div class="card">
+        <h2 style="font-size:18px">Launch in 5 steps</h2>
+        <div class="steps" style="margin-top:12px">
+          <div class="step"><div class="num"></div><div><h4>Brand it</h4><p>Swap "RateRise" for your business name and change the accent color in the file's <code>--brand</code> variable.</p></div></div>
+          <div class="step"><div class="num"></div><div><h4>Pick a storefront</h4><p>Create a free Gumroad or Payhip account (they handle checkout &amp; payments).</p></div></div>
+          <div class="step"><div class="num"></div><div><h4>Upload the file</h4><p>Add <code>index.html</code> as the digital download and set your price.</p></div></div>
+          <div class="step"><div class="num"></div><div><h4>Add your sales page</h4><p>Use the "Home" tab copy as your product description — it's already written to sell.</p></div></div>
+          <div class="step"><div class="num"></div><div><h4>Drive traffic</h4><p>Post the underpricing problem on Instagram/TikTok/Pinterest and link your store.</p></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 style="font-size:18px">Your checkout link</h2>
+        <p class="sub">Paste your Gumroad/Payhip/Stripe link and the button below goes live everywhere you share this file.</p>
+        <label class="field">Checkout / product URL
+          <input class="inp" id="l_link" placeholder="https://yourname.gumroad.com/l/pricing-toolkit" oninput="saveLink()">
+        </label>
+        <label class="field">Price to display
+          <input class="inp" id="l_price" placeholder="$37" value="$37" oninput="saveLink()">
+        </label>
+        <a class="btn gold" id="l_cta" href="#" target="_blank" rel="noopener" style="margin-top:6px">Get the Pricing Toolkit — $37</a>
+        <p class="note">Tip: keep the first version simple. Ship it, get 5 sales, then add a template pack or a short "how to price" video as a premium bundle.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="wrap"><div class="foot">RateRise · Runs entirely in your browser — your numbers never leave this page. Your data is saved locally on this device. <span class="saved" id="saved">✓ saved</span></div></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const money=n=>{n=isFinite(n)?n:0;return '$'+Math.round(n).toLocaleString('en-US')};
+const store={
+  get:(k,d)=>{try{const v=localStorage.getItem('rr_'+k);return v?JSON.parse(v):d}catch(e){return d}},
+  set:(k,v)=>{try{localStorage.setItem('rr_'+k,JSON.stringify(v))}catch(e){}}
+};
+let savedTimer;
+function flashSaved(){const s=$('saved');s.classList.add('show');clearTimeout(savedTimer);savedTimer=setTimeout(()=>s.classList.remove('show'),1200)}
+
+/* ---- Tabs ---- */
+function go(tab){
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  document.querySelectorAll('section.panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+tab));
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+$('tabs').addEventListener('click',e=>{if(e.target.dataset.tab)go(e.target.dataset.tab)});
+
+/* ---- Rate Calculator ---- */
+const rateInputs=['r_income','r_expenses','r_tax','r_weeks','r_hours','r_current'];
+function calcRate(){
+  const income=+$('r_income').value||0, exp=+$('r_expenses').value||0, tax=Math.min(+$('r_tax').value||0,69)/100;
+  const weeks=Math.max(+$('r_weeks').value||1,1), hours=Math.max(+$('r_hours').value||1,1), current=+$('r_current').value||0;
+  const grossNeeded=(income+exp)/(1-tax);      // revenue before tax that yields take-home + covers expenses
+  const billHours=weeks*hours;
+  const hourly=grossNeeded/billHours;
+  $('r_hourly').textContent=money(hourly);
+  $('r_day').textContent=money(hourly*7.5);
+  $('r_project').textContent=money(hourly*3.75);
+  $('r_revenue').textContent=money(grossNeeded);
+  $('r_billhours').textContent=Math.round(billHours).toLocaleString();
+  const fl=$('r_flag');
+  if(current>0){
+    const gap=hourly-current;
+    if(gap>0.5){
+      const annual=gap*billHours;
+      fl.className='flag warn';
+      fl.innerHTML=`⚠️ You may be undercharging by <b>${money(gap)}/hr</b> — about <b>${money(annual)}/year</b> left on the table at your current $${current}/hr.`;
+    }else{
+      fl.className='flag good';
+      fl.innerHTML=`✓ Your current rate of $${current}/hr already covers your goals. Room to raise it further as demand grows.`;
+    }
+  }else{fl.className='';fl.innerHTML=''}
+  const data={};rateInputs.forEach(k=>data[k]=$(k).value);store.set('rate',data);flashSaved();
+}
+rateInputs.forEach(k=>$(k).addEventListener('input',calcRate));
+
+/* ---- Package Builder ---- */
+let services=store.get('services',[]);
+const tierNames=['Essentials','Signature','Premium'];
+function addService(){
+  const name=$('p_name').value.trim(); const cost=+$('p_cost').value||0; const tier=+$('p_tier').value;
+  if(!name)return;
+  services.push({name,cost,tier});
+  $('p_name').value='';$('p_cost').value='';
+  saveServices();renderServices();
+}
+function delService(i){services.splice(i,1);saveServices();renderServices()}
+function saveServices(){store.set('services',services);flashSaved()}
+function renderServices(){
+  const tb=$('p_table').querySelector('tbody');tb.innerHTML='';
+  services.forEach((s,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${esc(s.name)}</td><td>${tierNames[s.tier]}</td><td class="num">${money(s.cost)}</td><td class="num"><button class="del" onclick="delService(${i})">✕</button></td>`;
+    tb.appendChild(tr);
+  });
+  $('p_empty').style.display=services.length?'none':'block';
+  renderTiers();
+}
+function renderTiers(){
+  const margin=Math.min(+$('p_margin').value||0,89)/100;
+  const box=$('p_tiers');box.innerHTML='';
+  const feats=['','featured',''];
+  const badges=['','Most popular',''];
+  for(let t=0;t<3;t++){
+    // a tier includes its own services plus everything from lower tiers (Good/Better/Best stacking)
+    const included=services.filter(s=>s.tier<=t);
+    const cost=included.reduce((a,s)=>a+s.cost,0);
+    const price=margin<1?cost/(1-margin):cost;
+    const profit=price-cost;
+    const div=document.createElement('div');
+    div.className='tier '+feats[t];
+    const items=included.map(s=>`<li>${esc(s.name)}</li>`).join('')||'<li style="opacity:.6">Add services to this tier</li>';
+    div.innerHTML=`${badges[t]?`<span class="badge">${badges[t]}</span>`:''}
+      <h3>${tierNames[t]}</h3>
+      <div class="price">${money(price)}</div>
+      <ul>${items}</ul>
+      ${cost>0?`<div class="profit">${money(profit)} profit · ${Math.round(margin*100)}% margin</div>`:''}`;
+    box.appendChild(div);
+  }
+}
+$('p_margin').addEventListener('input',()=>{renderTiers();saveServices()});
+
+/* ---- Quote Generator ---- */
+let quote=store.get('quote',{items:[]});
+function addQuoteItem(){
+  const desc=$('q_desc').value.trim();const qty=+$('q_qty').value||1;const price=+$('q_price').value||0;
+  if(!desc)return;
+  quote.items.push({desc,qty,price});
+  $('q_desc').value='';$('q_price').value='';$('q_qty').value='1';
+  renderQuoteTable();saveQuote();
+}
+function delQuoteItem(i){quote.items.splice(i,1);renderQuoteTable();saveQuote()}
+function renderQuoteTable(){
+  const tb=$('q_table').querySelector('tbody');tb.innerHTML='';
+  quote.items.forEach((it,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${esc(it.desc)}</td><td class="num">${it.qty}</td><td class="num">${money(it.price)}</td><td class="num"><button class="del" onclick="delQuoteItem(${i})">✕</button></td>`;
+    tb.appendChild(tr);
+  });
+  renderQuote();
+}
+function collectQuote(){
+  quote.biz=$('q_biz').value;quote.tag=$('q_tag').value;quote.client=$('q_client').value;
+  quote.valid=$('q_valid').value;quote.taxr=$('q_taxr').value;quote.deposit=$('q_deposit').value;quote.terms=$('q_terms').value;
+}
+function saveQuote(){collectQuote();store.set('quote',quote);flashSaved()}
+function renderQuote(){
+  collectQuote();
+  const items=quote.items||[];
+  const sub=items.reduce((a,it)=>a+it.qty*it.price,0);
+  const taxr=+quote.taxr||0;const tax=sub*taxr/100;const total=sub+tax;
+  const dep=+quote.deposit||0;const depAmt=total*dep/100;
+  const biz=quote.biz||'Your Business';
+  const initials=biz.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase()||'Y';
+  const rows=items.map(it=>`<tr><td>${esc(it.desc)}</td><td class="num">${it.qty}</td><td class="num">${money(it.price)}</td><td class="num">${money(it.qty*it.price)}</td></tr>`).join('')
+    ||'<tr><td colspan="4" style="color:#8a7d84">Add line items to build your quote →</td></tr>';
+  const validTxt=quote.valid?new Date(quote.valid+'T00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}):'—';
+  $('q_doc').innerHTML=`
+    <div class="qhead">
+      <div class="biz"><div class="mark">${esc(initials)}</div><div><div class="bn">${esc(biz)}</div><div class="bt">${esc(quote.tag||'Services')}</div></div></div>
+      <div class="meta"><div><b>QUOTE</b></div><div>Date: ${new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div><div>Valid until: ${validTxt}</div></div>
+    </div>
+    <h2 class="qt">Prepared for ${esc(quote.client||'your client')}</h2>
+    <table><thead><tr><th>Description</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="totals">
+      <div class="r"><span>Subtotal</span><span>${money(sub)}</span></div>
+      ${taxr>0?`<div class="r"><span>Tax (${taxr}%)</span><span>${money(tax)}</span></div>`:''}
+      <div class="r grand"><span>Total</span><span>${money(total)}</span></div>
+      ${dep>0?`<div class="r" style="color:#b13a6f;font-weight:700"><span>Deposit to book (${dep}%)</span><span>${money(depAmt)}</span></div>`:''}
+    </div>
+    ${quote.terms?`<div class="terms">${esc(quote.terms)}</div>`:''}`;
+}
+
+/* ---- Goal Tracker ---- */
+let wins=store.get('wins',[]);
+function calcGoal(){
+  const goal=+$('g_goal').value||0;const avg=Math.max(+$('g_avg').value||1,1);
+  const needed=Math.ceil(goal/avg);
+  $('g_needed').textContent=needed;
+  $('g_week').textContent=(needed/4.3).toFixed(1);
+  const booked=wins.reduce((a,w)=>a+w.val,0);
+  $('g_booked').textContent=money(booked);
+  $('g_goal2').textContent=money(goal);
+  const pct=goal>0?Math.min(booked/goal*100,100):0;
+  $('g_bar').style.width=pct+'%';
+  $('g_pct').textContent=Math.round(pct)+'% of goal'+(booked>=goal&&goal>0?' 🎉 goal hit!':'');
+  store.set('goal',{goal:$('g_goal').value,avg:$('g_avg').value});
+}
+function addWin(){
+  const name=$('g_wname').value.trim();const val=+$('g_wval').value||0;
+  if(!name||!val)return;
+  wins.push({name,val});$('g_wname').value='';$('g_wval').value='';
+  store.set('wins',wins);renderWins();flashSaved();
+}
+function delWin(i){wins.splice(i,1);store.set('wins',wins);renderWins()}
+function renderWins(){
+  const tb=$('g_table').querySelector('tbody');tb.innerHTML='';
+  wins.forEach((w,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${esc(w.name)}</td><td class="num">${money(w.val)}</td><td class="num"><button class="del" onclick="delWin(${i})">✕</button></td>`;
+    tb.appendChild(tr);
+  });
+  $('g_empty').style.display=wins.length?'none':'block';
+  calcGoal();
+}
+['g_goal','g_avg'].forEach(k=>$(k).addEventListener('input',calcGoal));
+
+/* ---- Launch link ---- */
+function saveLink(){
+  const link=$('l_link').value.trim();const price=$('l_price').value.trim()||'$37';
+  const cta=$('l_cta');
+  cta.textContent='Get the Pricing Toolkit — '+price;
+  cta.href=link||'#';
+  store.set('launch',{link,price});flashSaved();
+}
+
+/* ---- utils ---- */
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+/* ---- hydrate ---- */
+(function init(){
+  const rd=store.get('rate',null);if(rd)rateInputs.forEach(k=>{if(rd[k]!=null)$(k).value=rd[k]});
+  calcRate();
+  renderServices();
+  // quote
+  ['biz','tag','client','valid','taxr','deposit','terms'].forEach(k=>{if(quote[k]!=null)$('q_'+k).value=quote[k]});
+  if(!quote.valid){const d=new Date();d.setDate(d.getDate()+14);$('q_valid').value=d.toISOString().slice(0,10)}
+  renderQuoteTable();
+  // goal
+  const gd=store.get('goal',null);if(gd){$('g_goal').value=gd.goal;$('g_avg').value=gd.avg}
+  renderWins();
+  // launch
+  const ld=store.get('launch',null);if(ld){$('l_link').value=ld.link||'';$('l_price').value=ld.price||'$37'}
+  saveLink();
+})();
+</script>
+</body>
+</html>
