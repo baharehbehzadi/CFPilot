@@ -34,6 +34,10 @@ underprice themselves.
 
 ## Supporting documents
 
+- **`USER-GUIDE.md`** — plain-English owner's manual: what the tool is, how to open it, how to
+  use every screen, and a map of which document answers which question. Start here.
+- **`DEPLOYMENT.md`** — how to put it online free (Netlify Drop / GitHub Pages / Vercel), set up
+  the email-capture endpoint so leads reach your inbox, and deliver the promised cheat-sheet.
 - **`LISTING.md`** — ready-to-paste sales/listing copy (titles, descriptions, benefit bullets,
   FAQ, tags, and price points) for Gumroad, Payhip, or Etsy.
 - **`SELLING-ROADMAP.md`** — a phased go-to-market plan: how to set it up, get your first 5 sales,
